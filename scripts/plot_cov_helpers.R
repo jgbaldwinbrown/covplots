@@ -99,9 +99,39 @@ read_bed_cov_named <- function(inpath, nlog) {
 	return(giant)
 }
 
+# FST win is in bed format with extra FACET column after NAME
+read_bed_cov_named_facetted <- function(inpath, nlog) {
+	giant = as.data.frame(fread(inpath), header=FALSE)
+	print(head(giant))
+	if (ncol(giant) == 0) {
+		giant = data.frame(
+			character(),
+			numeric(),
+			numeric(),
+			numeric(),
+			character(),
+			character(),
+			numeric(),
+			numeric(),
+			numeric(),
+			stringsAsFactors = FALSE
+		)
+	}
+	print("giant could be empty")
+	print(head(giant))
+	colnames(giant) = c("chrom", "BP1", "BP", "VAL", "FACET", "NAME", "CHR", "cumsum.tmp", "cumsum.tmp2")
+	if (nlog) {
+		giant$VAL = -log10(giant$VAL)
+	}
+	print("final giant")
+	print(head(giant))
+	return(giant)
+}
+
 # FST win is in bed format
 read_bed_2val_named <- function(inpath, nlog) {
 	giant = as.data.frame(fread(inpath), header=FALSE)
+	print(head(giant))
 	if (ncol(giant) == 0) {
 		giant = data.frame(
 			character(),
@@ -427,4 +457,28 @@ plot_cov_vs_pair <- function(data, path, width, height, res_scale) {
 		theme_bw()
 		print(a)
 	dev.off()
+}
+
+plot_cov_multi_facet <- function(data, path, width, height, res_scale, medians, ylimmin, ylimmax) {
+	print("ylimmin:")
+	print(ylimmin)
+	print("ylimmax:")
+	print(ylimmax)
+	print("data head:")
+	print(head(data))
+	png(path, width = width * res_scale, height = height * res_scale, res = res_scale)
+		a = ggplot(data = data) +
+		geom_point(aes(x = (cumsum.tmp + cumsum.tmp2) / 2, y = VAL, color = factor(NAME))) +
+		scale_x_continuous(breaks = medians$median.x, labels = medians$chrom) +
+		xlab("Chromosome") +
+		ylab("Raw coverage") +
+		scale_color_discrete(name = "Dataset")+
+		ylim(ylimmin, ylimmax) +
+		theme_bw() + 
+		theme(text = element_text(size=24)) +
+		facet_grid(FACET~.)
+
+		print(a)
+	dev.off()
+		#geom_point(aes(x = cumsum.tmp, y = VAL, color = factor(NAME))) +
 }

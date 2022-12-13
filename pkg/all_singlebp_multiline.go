@@ -86,6 +86,23 @@ plot_singlebp_multiline_cov %v %v %v %v
 	return shellout.ShellOutPiped(script, os.Stdin, os.Stdout, os.Stderr)
 }
 
+func PlotMultiFacet(outpre string, ylim []float64) error {
+	fmt.Fprintf(os.Stderr, "running PlotMultiFacet\n")
+	script := fmt.Sprintf(
+		`#!/bin/bash
+set -e
+
+plot_singlebp_multiline_cov_facet %v %v %v %v
+`,
+		fmt.Sprintf("%v_plfmt.bed", outpre),
+		fmt.Sprintf("%v_plotted.png", outpre),
+		ylim[0],
+		ylim[1],
+	)
+
+	return shellout.ShellOutPiped(script, os.Stdin, os.Stdout, os.Stderr)
+}
+
 func Nop([]io.Reader, any) ([]io.Reader, error) {return nil, nil}
 
 func Panic([]io.Reader, any) ([]io.Reader, error) {
@@ -95,6 +112,7 @@ func Panic([]io.Reader, any) ([]io.Reader, error) {
 
 func GetFunc(fstr string) func(rs []io.Reader, args any) ([]io.Reader, error) {
 	switch fstr {
+	case "add_facet": return AddFacet
 	case "subtract_two": return SubtractTwo
 	case "unchanged": return Unchanged
 	case "normalize": return Normalize
@@ -144,7 +162,7 @@ func CloseAny[T any](ts ...T) {
 func MultiplotInputSet(cfg InputSet, chr string, start, end int, fullchr bool) (io.Reader, []io.Closer, error) {
 	rs, err := OpenPaths(cfg.Paths...)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("MultiplotInputSet: during OpenPaths: %w", err)
 	}
 	var closers []io.Closer
 	for _, r := range rs {
@@ -156,7 +174,7 @@ func MultiplotInputSet(cfg InputSet, chr string, start, end int, fullchr bool) (
 		frs, err = FilterMulti(chr, start, end, rs...)
 		if err != nil {
 			CloseAny(closers...)
-			return nil, nil, err
+			return nil, nil, fmt.Errorf("MultiplotInputSet: during FilterMulti: %w", err)
 		}
 	} else {
 		frs = rs
@@ -172,7 +190,7 @@ func MultiplotInputSet(cfg InputSet, chr string, start, end int, fullchr bool) (
 		}
 		if err != nil {
 			CloseAny(closers...)
-			return nil, nil, fmt.Errorf("error when running %v", funcstr)
+			return nil, nil, fmt.Errorf("error when running %v: %w", funcstr, err)
 		}
 	}
 	if len(frs) != 1 {
@@ -200,7 +218,7 @@ func Multiplot(cfg UltimateConfig, chr string, start, end int) error {
 	for _, set := range cfg.InputSets {
 		r, closers, err := MultiplotInputSet(set, chr, start, end, cfg.Fullchr)
 		if err != nil {
-			return err
+			return fmt.Errorf("Multiplot: during MultiplotInputSet: %w", err)
 		}
 		defer CloseAny(closers...)
 		rs = append(rs, r)
@@ -213,12 +231,12 @@ func Multiplot(cfg UltimateConfig, chr string, start, end int) error {
 
 	combined, err := CombineSinglebpPlots(names, rs...)
 	if err != nil {
-		return err
+		return fmt.Errorf("Multiplot: during CombineSinglebpPlots: %w", err)
 	}
 
 	err = PlfmtSmall(combined, outpre)
 	if err != nil {
-		return err
+		return fmt.Errorf("Multiplot: during PlfmtSmall: %w", err)
 	}
 
 	ylim := []float64{-300,300}
@@ -229,12 +247,12 @@ func Multiplot(cfg UltimateConfig, chr string, start, end int) error {
 	plotfunc := GetPlotFunc(cfg.Plotfunc)
 	err = plotfunc(outpre, ylim, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("Multiplot: during plotfunc: %w", err)
 	}
 
 	err = GzPath(outpre + "_plfmt.bed", 8)
 	if err != nil {
-		return err
+		return fmt.Errorf("Multiplot: during GzPath: %w", err)
 	}
 
 	return nil
@@ -341,7 +359,7 @@ func Normalize(rs []io.Reader, args any) ([]io.Reader, error) {
 func MultiplotFullchr(cfg UltimateConfig) error {
 	err := Multiplot(cfg, "full_genome", 0, 0)
 	if err != nil {
-		return fmt.Errorf("MultiplotSlide loop: %w", err)
+		return fmt.Errorf("MultiplotFullchr: %w", err)
 	}
 
 	return nil

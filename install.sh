@@ -21,8 +21,13 @@ cp scripts/plot_single_cov.R ~/mybin/plot_single_cov
 chmod +x ~/mybin/plot_single_cov
 cp scripts/plot_sub_single_cov.R ~/mybin/plot_sub_single_cov
 chmod +x ~/mybin/plot_sub_single_cov
+
 cp scripts/plot_singlebp_multiline_cov.R ~/mybin/plot_singlebp_multiline_cov
 chmod +x ~/mybin/plot_singlebp_multiline_cov
+
+cp scripts/plot_singlebp_multiline_cov_facet.R ~/mybin/plot_singlebp_multiline_cov_facet
+chmod +x ~/mybin/plot_singlebp_multiline_cov_facet
+
 cp scripts/plot_cov_helpers.R ~/rlibs
 
 cp scripts/plot_cov_vs_pair.R ~/mybin/plot_cov_vs_pair

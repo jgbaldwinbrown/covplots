@@ -13,6 +13,7 @@ import (
 func GetPlotFunc(fstr string) func(outpre string, ylim []float64, args any) error {
 	switch fstr {
 	case "plot_multi": return PlotMultiAny
+	case "plot_multi_facet": return PlotMultiFacetAny
 	case "": return PlotMultiAny
 	case "plot_cov_vs_pair": return PlotCovVsPair
 	default: return PlotPanic
@@ -26,6 +27,10 @@ func PlotPanic(outpre string, ylim []float64, args any) error {
 
 func PlotMultiAny(outpre string, ylim []float64, args any) error {
 	return PlotMulti(outpre, ylim)
+}
+
+func PlotMultiFacetAny(outpre string, ylim []float64, args any) error {
+	return PlotMultiFacet(outpre, ylim)
 }
 
 func PlotCovVsPair(outpre string, ylim []float64, args any) error {
