@@ -1,6 +1,8 @@
 package covplots
 
 import (
+	"compress/gzip"
+	"regexp"
 	"errors"
 	"os/exec"
 	"math"
@@ -21,6 +23,9 @@ func GetAllMultiplotFlags() AllSingleFlags {
 	flag.IntVar(&f.WinSize, "w", 1000000, "Sliding window plot size (default = 1000000).")
 	flag.IntVar(&f.WinStep, "s", 1000000, "Sliding window step distance (default = 1000000).")
 	flag.IntVar(&f.Threads, "t", 8, "Threads to run simultaneously")
+	flag.BoolVar(&f.WholeGenome, "g", false, "Generate one plot for the whole genome, no windowing; this overrides all other options")
+	// flag.BoolVar(&f.NoParent, "p", false, "Remove parent names from chromosomes")
+	flag.StringVar(&f.SelectWins, "c", "", "Plot the windows specified in the provided .bed file path; this overrides sliding window options")
 	flag.Parse()
 
 	return f
@@ -36,9 +41,17 @@ func RunAllMultiplot() {
 	}
 	fmt.Println(cfg)
 
-	err = AllMultiplotParallel(cfg, f.WinSize, f.WinStep, f.Threads)
+	var selectWins []BedEntry
+	if f.SelectWins != "" {
+		selectWins, err = ReadBedPath(f.SelectWins)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	err = AllMultiplotParallel(cfg, f.WinSize, f.WinStep, f.Threads, f.WholeGenome, selectWins)
 	if err != nil {
-		panic(err)
+		panic(fmt.Errorf("RunAllMultiplot: %w", err))
 	}
 }
 
@@ -86,6 +99,102 @@ plot_singlebp_multiline_cov %v %v %v %v
 	return shellout.ShellOutPiped(script, os.Stdin, os.Stdout, os.Stderr)
 }
 
+func PlotMultiFixedOrder(outpre string, ylim []float64) error {
+	script := fmt.Sprintf(
+		`#!/bin/bash
+set -e
+
+plot_singlebp_multiline_cov_fixed_order %v %v %v %v
+`,
+		fmt.Sprintf("%v_plfmt.bed", outpre),
+		fmt.Sprintf("%v_plotted.png", outpre),
+		ylim[0],
+		ylim[1],
+	)
+
+	return shellout.ShellOutPiped(script, os.Stdin, os.Stdout, os.Stderr)
+}
+
+	// xlab = args[5]
+	// ylab = args[6]
+
+	// width = as.numeric(args[7])
+	// height = as.numeric(args[8])
+	// res = as.numeric(args[9])
+
+type PrettyCfg struct {
+	Xlab string
+	Ylab string
+	Width float64
+	Height float64
+	Res float64
+	TextSize float64
+}
+
+func PlotMultiPretty(outpre string, ylim []float64, cfg PrettyCfg) error {
+	script := fmt.Sprintf(
+		`#!/bin/bash
+set -e
+
+plot_singlebp_multiline_cov_pretty "%v" "%v" "%v" "%v" "%v" "%v" "%v" "%v" "%v" "%v"
+`,
+		fmt.Sprintf("%v_plfmt.bed", outpre),
+		fmt.Sprintf("%v_plotted.png", outpre),
+		ylim[0],
+		ylim[1],
+		cfg.Xlab,
+		cfg.Ylab,
+		cfg.Width,
+		cfg.Height,
+		cfg.Res,
+		cfg.TextSize,
+	)
+
+	return shellout.ShellOutPiped(script, os.Stdin, os.Stdout, os.Stderr)
+}
+
+func PlotMultiPrettyBlue(outpre string, ylim []float64, cfg PrettyCfg) error {
+	script := fmt.Sprintf(
+		`#!/bin/bash
+set -e
+
+plot_multi_pretty_blue "%v" "%v" "%v" "%v" "%v" "%v" "%v" "%v" "%v"
+`,
+		fmt.Sprintf("%v_plfmt.bed", outpre),
+		fmt.Sprintf("%v_plotted.png", outpre),
+		ylim[0],
+		ylim[1],
+		cfg.Xlab,
+		cfg.Ylab,
+		cfg.Width,
+		cfg.Height,
+		cfg.Res,
+	)
+
+	return shellout.ShellOutPiped(script, os.Stdin, os.Stdout, os.Stderr)
+}
+
+func PlotMultiPrettyColorseries(outpre string, ylim []float64, cfg PrettyCfg) error {
+	script := fmt.Sprintf(
+		`#!/bin/bash
+set -e
+
+plot_multi_pretty_colorseries "%v" "%v" "%v" "%v" "%v" "%v" "%v" "%v" "%v"
+`,
+		fmt.Sprintf("%v_plfmt.bed", outpre),
+		fmt.Sprintf("%v_plotted.png", outpre),
+		ylim[0],
+		ylim[1],
+		cfg.Xlab,
+		cfg.Ylab,
+		cfg.Width,
+		cfg.Height,
+		cfg.Res,
+	)
+
+	return shellout.ShellOutPiped(script, os.Stdin, os.Stdout, os.Stderr)
+}
+
 func PlotMultiFacet(outpre string, ylim []float64) error {
 	fmt.Fprintf(os.Stderr, "running PlotMultiFacet\n")
 	script := fmt.Sprintf(
@@ -114,8 +223,11 @@ func GetFunc(fstr string) func(rs []io.Reader, args any) ([]io.Reader, error) {
 	switch fstr {
 	case "add_facet": return AddFacet
 	case "subtract_two": return SubtractTwo
+	case "dumb_subtract_two": return DumbSubtractTwo
 	case "unchanged": return Unchanged
 	case "normalize": return Normalize
+	case "fourcolumns": return FourColumns
+	case "fourcolumns_some": return FourColumnsSome
 	case "columns": return Columns
 	case "columns_some": return ColumnsSome
 	case "hic_self_cols": return HicSelfColumns
@@ -131,16 +243,83 @@ func GetFunc(fstr string) func(rs []io.Reader, args any) ([]io.Reader, error) {
 	case "cov_win_cols_some": return WindowCovColumnsSome
 	case "per_bp": return MultiplePerBpNormalize
 	case "combine_to_one_line": return CombineToOneLine
+	case "combine_to_one_line_dumb": return CombineToOneLineDumb
+	case "log10": return Log10
+	case "abs": return Abs
+	case "add": return Add
+	case "gunzip": return Gunzip
+	case "chrgrep": return ChrGrep
+	case "colgrep": return ColGrep
+	case "colgrep_some": return ColGrepSome
+	case "colsed": return ColSed
+	case "colsed_some": return ColSedSome
+	case "sliding_mean": return SlidingMean
+	case "strip_header": return StripHeader
+	case "strip_header_some": return StripHeaderSome
+	case "subset_dumb": return SubsetDumb
+	case "subset_dumb_some": return SubsetDumbSome
+	case "shell": return Shell
+	case "shell_some": return ShellSome
+	case "hic_ovl_cols": return HicOvlColumns
+	case "hic_ovl_cols_some": return HicOvlColumnsSome
+	case "hic_nonovl_cols": return HicNonovlColumns
+	case "hic_nonovl_cols_some": return HicNonovlColumnsSome
+	case "hic_nonovl_prop_cols": return HicNonovlPropColumns
+	case "hic_nonovl_prop_cols_some": return HicNonovlPropColumnsSome
+	case "hic_nonovl_prop_fpkm_cols": return HicNonovlPropFpkmColumns
+	case "hic_nonovl_prop_fpkm_cols_some": return HicNonovlPropFpkmColumnsSome
+	case "hic_ovl_prop_cols": return HicOvlPropColumns
+	case "hic_ovl_prop_cols_some": return HicOvlPropColumnsSome
+	case "hic_ovl_prop_fpkm_cols": return HicOvlPropFpkmColumns
+	case "hic_ovl_prop_fpkm_cols_some": return HicOvlPropFpkmColumnsSome
 	default: return Panic
 	}
 	return Panic
+}
+
+type GzReader struct {
+	f *os.File
+	*gzip.Reader
+}
+
+func (r *GzReader) Close() error {
+	e1 := r.Reader.Close()
+	e2 := r.f.Close()
+	if e1 != nil {
+		return e1
+	}
+	if e2 != nil {
+		return e2
+	}
+	return nil
+}
+
+func OpenMaybeGz(path string) (io.ReadCloser, error) {
+	re := regexp.MustCompile(`\.gz$`)
+
+	r, e := os.Open(path)
+	if e != nil {
+		return nil, e
+	}
+
+	if !re.MatchString(path) {
+		return r, nil
+	}
+
+	gr, e := gzip.NewReader(r)
+	if e != nil {
+		r.Close()
+		return nil, e
+	}
+
+	return &GzReader{f: r, Reader: gr}, nil
 }
 
 func OpenPaths(paths ...string) ([]io.Reader, error) {
 	fmt.Printf("opening paths %v\n", paths)
 	var out []io.Reader
 	for _, path := range paths {
-		r, err := os.Open(path)
+		r, err := OpenMaybeGz(path)
 		if err != nil {
 			CloseAny(out...)
 			return nil, err
@@ -190,14 +369,31 @@ func MultiplotInputSet(cfg InputSet, chr string, start, end int, fullchr bool) (
 		}
 		if err != nil {
 			CloseAny(closers...)
-			return nil, nil, fmt.Errorf("error when running %v: %w", funcstr, err)
+			return nil, nil, fmt.Errorf("error when running %v: %w; paths: %v", funcstr, err, cfg.Paths)
 		}
 	}
 	if len(frs) != 1 {
 		CloseAny(closers...)
 		return nil, nil, fmt.Errorf("Need exactly one reader")
 	}
-	return frs[0], closers, err
+
+
+	var out io.Reader = frs[0]
+	if !fullchr {
+		outs, err := FilterMulti(chr, start, end, frs[0])
+		if err != nil {
+			CloseAny(closers...)
+			return nil, nil, fmt.Errorf("MultiplotInputSet: during FilterMulti 2: %w", err)
+		}
+		if len(outs) != 1 {
+			CloseAny(closers...)
+			return nil, nil, fmt.Errorf("Need exactly one reader")
+		}
+		out = outs[0]
+	}
+
+
+	return out, closers, err
 }
 
 func CheckPathExists(path string) bool {
@@ -212,11 +408,47 @@ func GzPath(path string, threads int) error {
 	return cmd.Run()
 }
 
+func StripParent(r io.Reader) (io.Reader, error) {
+	newr := PipeWrite(func(w io.Writer) {
+		s := bufio.NewScanner(r)
+		s.Buffer([]byte{}, 1e12)
+		re := regexp.MustCompile(`^([^_	]*)_([^	])*`)
+		for s.Scan() {
+			line := re.ReplaceAllString(s.Text(), "$1")
+			fmt.Fprintln(w, line)
+		}
+	})
+	return newr, nil
+}
+
+func GetManualChrs(path string) (chrs []string, err error) {
+	h := Handle("GetManualChrs: %w")
+
+	bed, e := ReadBedPath(path)
+	if e != nil { return nil, h(e) }
+
+	for _, bede := range bed {
+		chrs = append(chrs, bede.Chr)
+	}
+
+	return chrs, nil
+}
+
+type MultiplotPlotFuncArgs struct {
+	Plformatter *Plformatter
+	Cfg UltimateConfig
+	Chr string
+	Start int
+	End int
+	Fullchr bool
+}
+
 func Multiplot(cfg UltimateConfig, chr string, start, end int) error {
 	outpre := fmt.Sprintf("%s_%v_%v_%v", cfg.Outpre, chr, start, end)
 	var rs []io.Reader
+	fullchr := cfg.Fullchr || chr == "full_genome"
 	for _, set := range cfg.InputSets {
-		r, closers, err := MultiplotInputSet(set, chr, start, end, cfg.Fullchr)
+		r, closers, err := MultiplotInputSet(set, chr, start, end, fullchr)
 		if err != nil {
 			return fmt.Errorf("Multiplot: during MultiplotInputSet: %w", err)
 		}
@@ -229,12 +461,32 @@ func Multiplot(cfg UltimateConfig, chr string, start, end int) error {
 		names = append(names, set.Name)
 	}
 
+	var combined io.Reader
 	combined, err := CombineSinglebpPlots(names, rs...)
 	if err != nil {
 		return fmt.Errorf("Multiplot: during CombineSinglebpPlots: %w", err)
 	}
 
-	err = PlfmtSmall(combined, outpre)
+	if cfg.NoParent {
+		combined, err = StripParent(combined)
+		if err != nil {
+			return fmt.Errorf("Multiplot: during StripParent: %w", err)
+		}
+	}
+
+	var pf *Plformatter
+
+	if len(cfg.ManualChrs) > 0 {
+		pf, err = PlfmtSmall(combined, outpre, cfg.ManualChrs, true)
+	} else if cfg.ManualChrsBedPath != "" {
+		manualChrs, err := GetManualChrs(cfg.ManualChrsBedPath)
+		if err != nil {
+			return fmt.Errorf("Multiplot: during GetManualChrs: %w", err)
+		}
+		pf, err = PlfmtSmall(combined, outpre, manualChrs, true)
+	} else {
+		pf, err = PlfmtSmall(combined, outpre, nil, false)
+	}
 	if err != nil {
 		return fmt.Errorf("Multiplot: during PlfmtSmall: %w", err)
 	}
@@ -244,8 +496,18 @@ func Multiplot(cfg UltimateConfig, chr string, start, end int) error {
 		ylim = cfg.Ylim
 	}
 
+	mPlotFuncArgs := MultiplotPlotFuncArgs{
+		Plformatter: pf,
+		Cfg: cfg,
+		Chr: chr,
+		Start: start,
+		End: end,
+		Fullchr: fullchr,
+	}
+
 	plotfunc := GetPlotFunc(cfg.Plotfunc)
-	err = plotfunc(outpre, ylim, nil)
+
+	err = plotfunc(outpre, ylim, cfg.PlotfuncArgs, mPlotFuncArgs)
 	if err != nil {
 		return fmt.Errorf("Multiplot: during plotfunc: %w", err)
 	}
@@ -365,6 +627,18 @@ func MultiplotFullchr(cfg UltimateConfig) error {
 	return nil
 }
 
+func MultiplotSelectWins(cfg UltimateConfig, wins []BedEntry) error {
+	h := Handle("MultiplotSelectWins: %w")
+	fmt.Printf("MultiplotSelectWins: input: %v\n", wins)
+
+	for _, entry := range wins {
+		e := Multiplot(cfg, entry.Chr, int(entry.Start), int(entry.End))
+		if E(e) { return h(e) }
+	}
+
+	return nil
+}
+
 func MultiplotSlide(cfg UltimateConfig, winsize, winstep int) error {
 	chrlens, err := GetChrLens(cfg.Chrlens)
 	if err != nil {
@@ -385,7 +659,7 @@ func MultiplotSlide(cfg UltimateConfig, winsize, winstep int) error {
 	return nil
 }
 
-func AllMultiplotParallel(cfgs []UltimateConfig, winsize, winstep, threads int) error {
+func AllMultiplotParallel(cfgs []UltimateConfig, winsize, winstep, threads int, fullgenome bool, selectWins []BedEntry) error {
 	jobs := make(chan UltimateConfig, len(cfgs))
 	for _, cfg := range cfgs {
 		jobs <- cfg
@@ -397,8 +671,10 @@ func AllMultiplotParallel(cfgs []UltimateConfig, winsize, winstep, threads int) 
 	for i:=0; i<threads; i++ {
 		go func() {
 			for cfg := range jobs {
-				if cfg.Fullchr {
+				if cfg.Fullchr || fullgenome {
 					errs <- MultiplotFullchr(cfg)
+				} else if selectWins != nil {
+					errs <- MultiplotSelectWins(cfg, selectWins)
 				} else {
 					errs <- MultiplotSlide(cfg, winsize, winstep)
 				}
@@ -414,7 +690,7 @@ func AllMultiplotParallel(cfgs []UltimateConfig, winsize, winstep, threads int) 
 		}
 	}
 	if len(out) > 0 {
-		return out
+		return fmt.Errorf("AllMultiplotParallel: %w", out)
 	}
 
 	fmt.Println("done with parallel")

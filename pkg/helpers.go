@@ -1,6 +1,7 @@
 package covplots
 
 import (
+	"encoding/csv"
 	"strings"
 	"strconv"
 	"regexp"
@@ -39,36 +40,72 @@ type PlfmtEntry struct {
 	EndOff int
 }
 
-func PlfmtSmall(r io.Reader, outpre string) error {
-	w, err := os.Create(outpre + "_plfmt.bed")
-	if err != nil {
-		return err
+func SscanfMulti(line []string, fmts []string, ptrs ...any) (n int, err error) {
+	for i, ptr := range ptrs {
+		_, err = fmt.Sscanf(line[i], fmts[i], ptr)
+		if err != nil {
+			return n, err
+		}
+		n++
 	}
-	defer w.Close()
-	bw := bufio.NewWriter(w)
-	defer bw.Flush()
+	return n, nil
+}
+
+type Plformatter struct {
+	UseManualChrs bool
+	Chrset map[string]struct{}
+	Chroffs map[string]int
+	Chrnums map[string]int
+}
+
+func PlfmtSmall(r io.Reader, outpre string, manualChrs []string, useManualChrs bool) (*Plformatter, error) {
+	data, out, err := PlfmtSmallRead(r, manualChrs, useManualChrs)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = PlfmtSmallWrite(outpre, data, out); err != nil {
+			return nil, err
+	}
+	return out, nil
+}
+
+func PlfmtSmallRead(r io.Reader, manualChrs []string, useManualChrs bool) ([]PlfmtEntry, *Plformatter, error) {
+	h := func(e error) ([]PlfmtEntry, *Plformatter, error) {
+		return nil, nil, fmt.Errorf("PlfmtSmallRead: %w", e)
+	}
+
+	out := &Plformatter {
+		UseManualChrs: useManualChrs,
+		Chrset: map[string]struct{}{},
+		Chroffs: map[string]int{},
+		Chrnums: map[string]int{},
+	}
 
 	data := []PlfmtEntry{}
 	s := bufio.NewScanner(r)
 	s.Buffer([]byte{}, 1e12)
 	chrlens := make(map[string]int)
 	chrmins := make(map[string]int)
+
 	chrs := []string{}
 
 	for s.Scan() {
+		if s.Err() != nil {
+			return h(s.Err())
+		}
+
 		line := strings.Split(s.Text(), "\t")
 		if len(line) < 3 {
 			continue
 		}
-		start, err := strconv.ParseInt(line[1], 0, 64)
+
+		entry := PlfmtEntry{Chr: line[0], Text: s.Text(), Line: line}
+		_, err := SscanfMulti(line[1:3], []string{"%d", "%d"}, &entry.Start, &entry.End)
 		if err != nil {
 			continue
 		}
-		end, err := strconv.ParseInt(line[2], 0, 64)
-		if err != nil {
-			continue
-		}
-		entry := PlfmtEntry{Chr: line[0], Start: int(start), End: int(end), Text: s.Text(), Line: line}
+
 		length, ok := chrlens[entry.Chr]
 		if !ok {
 			chrlens[entry.Chr] = 0
@@ -92,14 +129,17 @@ func PlfmtSmall(r io.Reader, outpre string) error {
 	}
 
 	if len(chrs) < 1 {
-		return nil
+		return data, out, nil
+	}
+
+
+	if useManualChrs {
+		chrs = manualChrs
 	}
 
 	bpused := []int{chrlens[chrs[0]] - chrmins[chrs[0]]}
-	chrnums := make(map[string]int)
-	chrnums[chrs[0]] = 0
-	chroffs := make(map[string]int)
-	chroffs[chrs[0]] = -chrmins[chrs[0]]
+	out.Chrnums[chrs[0]] = 0
+	out.Chroffs[chrs[0]] = -chrmins[chrs[0]]
 
 	/*
 	idx	start	end	fstart	fend	offset
@@ -110,17 +150,49 @@ func PlfmtSmall(r io.Reader, outpre string) error {
 
 	for i:=1; i<len(chrs); i++ {
 		chr := chrs[i]
-		chrnums[chr] = i
+		out.Chrnums[chr] = i
 
 		bpused = append(bpused, bpused[i-1] + chrlens[chr] - chrmins[chr])
 		// offsets = append(offsets, offsets[i-1] + chrlens[chrs[i-1]] - chrmins[chrs[i-1] - chrmins[chrs[i]])
-		chroffs[chr] = bpused[i-1] - chrmins[chr]
+		out.Chroffs[chr] = bpused[i-1] - chrmins[chr]
 	}
+
+	if useManualChrs {
+		for _, chr := range chrs {
+			out.Chrset[chr] = struct{}{}
+		}
+	}
+
+	return data, out, nil
+}
+
+func PlfmtSmallWrite(outpre string, data []PlfmtEntry, f *Plformatter) error {
+	h := func(e error) error {
+		return fmt.Errorf("PlfmtSmallWrite: %w", e)
+	}
+
+	w, err := os.Create(outpre + "_plfmt.bed")
+	if err != nil {
+		return h(err)
+	}
+	defer w.Close()
+	bw := bufio.NewWriter(w)
+	defer bw.Flush()
+
+
 	for _, e := range data {
-		e.StartOff = chroffs[e.Chr] + e.Start
-		e.EndOff = chroffs[e.Chr] + e.End
-		e.ChrNum = chrnums[e.Chr]
-		fmt.Fprintf(bw, "%s\t%d\t%d\t%d\n", e.Text, e.ChrNum, e.StartOff, e.EndOff)
+		if f.UseManualChrs {
+			if _, ok := f.Chrset[e.Chr]; !ok {
+				continue
+			}
+		}
+		e.StartOff = f.Chroffs[e.Chr] + e.Start
+		e.EndOff = f.Chroffs[e.Chr] + e.End
+		e.ChrNum = f.Chrnums[e.Chr]
+
+		if _, err := fmt.Fprintf(bw, "%s\t%d\t%d\t%d\n", e.Text, e.ChrNum, e.StartOff, e.EndOff); err != nil {
+			return h(err)
+		}
 	}
 	return nil
 }
@@ -264,10 +336,149 @@ func ReChrSingle(r io.Reader, biolines []string) (io.Reader) {
 	s := bufio.NewScanner(r)
 	s.Buffer([]byte{}, 1e12)
 	rout := PipeWrite(func(w io.Writer) {
-		for _, l := range biolines {
-			out := chrre.ReplaceAllString(s.Text(), `&` + "_" + l)
+		for s.Scan() {
+			out := s.Text()
+			for _, l := range biolines {
+				out = chrre.ReplaceAllString(out, `&` + "_" + l)
+			}
 			fmt.Println(w, out)
 		}
+	})
+	return rout
+}
+
+func ChrGrep(rs []io.Reader, apattern any) ([]io.Reader, error) {
+	pattern, ok := apattern.(string)
+	if !ok {
+		return nil, fmt.Errorf("pattern %v not of type string", apattern)
+	}
+
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		return nil, fmt.Errorf("ChrGrep: could not compile pattern %v with error %w", pattern, err)
+	}
+
+	var outs []io.Reader
+	for _, r := range rs {
+		outs = append(outs, ChrGrepSingle(r, re))
+	}
+	return outs, nil
+}
+
+func ChrGrepSingle(r io.Reader, re *regexp.Regexp) (io.Reader) {
+	chrre := regexp.MustCompile(`^[^	]*`)
+	s := bufio.NewScanner(r)
+	s.Buffer([]byte{}, 1e12)
+	rout := PipeWrite(func(w io.Writer) {
+		i := 0
+		j := 0
+		for s.Scan() {
+			chrstr := chrre.FindString(s.Text())
+			if re.MatchString(chrstr) {
+				fmt.Fprintln(w, s.Text())
+				j++
+			}
+			i++
+		}
+		fmt.Fprintf(os.Stderr, "ChrGrep: printed %v of %v lines\n", j, i)
+	})
+	return rout
+}
+
+type ColGrepArgs struct {
+	Col int
+	Pattern string
+}
+
+type ColGrepSomeArgs struct {
+	Files []int
+	Col int
+	Pattern string
+}
+
+func ColGrep(rs []io.Reader, anyargs any) ([]io.Reader, error) {
+	h := Handle("ColGrep: %w")
+
+	fmt.Fprintln(os.Stderr, "one")
+	var args ColGrepArgs
+	err := UnmarshalJsonOut(anyargs, &args)
+
+	if err != nil {
+		return nil, h(err)
+	}
+
+	fmt.Fprintln(os.Stderr, "two")
+	re, err := regexp.Compile(args.Pattern)
+	if err != nil {
+		return nil, fmt.Errorf("ChrGrep: could not compile pattern %v with error %w", args.Pattern, err)
+	}
+
+	fmt.Fprintln(os.Stderr, "three")
+	var outs []io.Reader
+	for _, r := range rs {
+		outs = append(outs, ColGrepSingle(r, args.Col, re))
+	}
+
+	fmt.Fprintln(os.Stderr, "four")
+	return outs, nil
+}
+
+func ColGrepSome(rs []io.Reader, anyargs any) ([]io.Reader, error) {
+	h := Handle("ColGrepSome: %w")
+
+	var args ColGrepSomeArgs
+	err := UnmarshalJsonOut(anyargs, &args)
+
+	if err != nil {
+		return nil, h(err)
+	}
+
+	re, err := regexp.Compile(args.Pattern)
+	if err != nil {
+		return nil, fmt.Errorf("ChrGrep: could not compile pattern %v with error %w", args.Pattern, err)
+	}
+
+	out := make([]io.Reader, len(rs))
+	for i, r := range rs {
+		out[i] = r
+	}
+	for _, ridx := range args.Files {
+		out[ridx] = ColGrepSingle(rs[ridx], args.Col, re)
+	}
+	return out, nil
+}
+
+func ColGrepSingle(r io.Reader, col int, re *regexp.Regexp) (io.Reader) {
+	h := Handle("ColGrepSingle: %w")
+
+	rout := PipeWrite(func(w io.Writer) {
+		cr := csv.NewReader(r)
+		cr.LazyQuotes = true
+		cr.ReuseRecord = true
+		cr.FieldsPerRecord = -1
+		cr.Comma = rune('\t')
+
+		cw := csv.NewWriter(w)
+		cw.Comma = rune('\t')
+		defer cw.Flush()
+
+		i := 0
+		j := 0
+
+		for l, e := cr.Read() ; e != io.EOF; l, e = cr.Read() {
+			if e != nil {
+				panic(h(e))
+			}
+			if len(l) <= col {
+				panic(h(fmt.Errorf("len(l) %v <= col %v", len(l), col)))
+			}
+			if re.MatchString(l[col]) {
+				cw.Write(l)
+				j++
+			}
+			i++
+		}
+		fmt.Fprintf(os.Stderr, "ColGrep: printed %v of %v lines\n", j, i)
 	})
 	return rout
 }

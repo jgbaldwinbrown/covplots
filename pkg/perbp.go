@@ -45,13 +45,13 @@ func PerBp(r io.Reader) io.Reader {
 		for s.Scan() {
 			line = lscan.SplitByFunc(line, s.Text(), split)
 			if len(line) < 4 {
-				fmt.Fprintln(os.Stderr, "PerBp: line %v too short", line)
+				fmt.Fprintf(os.Stderr, "PerBp: line %v too short\n", line)
 				continue
 			}
 
 			err := ScanInts(&floats, line[1:4])
 			if err != nil || len(floats) < 3 {
-				fmt.Fprintln(os.Stderr, "PerBp: err %v or len(floats) < 3 %v", err, floats)
+				fmt.Fprintf(os.Stderr, "PerBp: err %v or len(floats) < 3 %v\n", err, floats)
 				continue
 			}
 

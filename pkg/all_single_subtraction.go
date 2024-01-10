@@ -236,7 +236,7 @@ func SubtractSinglePlot(r1, r2 io.Reader, outpre, chr string, start, end int) er
 		return err
 	}
 
-	err = PlfmtSmall(fr3, outpre)
+	_, err = PlfmtSmall(fr3, outpre, nil, false)
 	if err != nil {
 		return err
 	}

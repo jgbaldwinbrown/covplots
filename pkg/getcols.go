@@ -9,11 +9,29 @@ import (
 )
 
 func Columns(rs []io.Reader, args any) ([]io.Reader, error) {
-	cols, ok := args.([]int)
+	anycols, ok := args.([]any)
 	if !ok {
-		return nil, fmt.Errorf("wrong argument %v to Columns", args)
+		return nil, fmt.Errorf("wrong argument %v to Columns; args is not of type []any", args)
+	}
+	var cols []int
+	for _, acol := range anycols {
+		fcol, ok := acol.(float64)
+		if !ok {
+			return nil, fmt.Errorf("wrong argument %v to Columns; col %v is not of type int", args, fcol)
+		}
+		cols = append(cols, int(fcol))
 	}
 	return GetMultipleCols(rs, cols), nil
+}
+
+func FourColumns(rs []io.Reader, args any) ([]io.Reader, error) {
+	return GetMultipleCols(rs, []int{0,1,2,3}), nil
+}
+
+func FourColumnsSome(rs []io.Reader, args any) ([]io.Reader, error) {
+	readers := ToIntSlice(args)
+	fmt.Printf("FourColumnsSome: putting rs %v into GetMultiple Cols, with reader indices %v\n", rs, readers)
+	return GetMultipleColsSome(rs, []int{0,1,2,3}, readers), nil
 }
 
 func ToIntSlice(a any) []int {
@@ -38,6 +56,7 @@ func ColumnsSome(rs []io.Reader, args any) ([]io.Reader, error) {
 	colsandreaders := ToIntSliceSlice(args)
 	cols := colsandreaders[0]
 	readers := colsandreaders[1]
+	fmt.Printf("ColumnsSome: putting rs %v into GetMultiple Cols, with cols %v and reader indices %v\n", rs, cols, readers)
 	// if !ok {
 	// 	return nil, fmt.Errorf("wrong argument %v to Columns", args)
 	// }
@@ -118,13 +137,14 @@ func GetMultipleColsSome(rs []io.Reader, cols []int, rs_to_subset []int) []io.Re
 
 func GetCols(r io.Reader, cols []int) io.Reader {
 	return PipeWrite(func(w io.Writer) {
-		fmt.Println("running GetCols internal func")
+		fmt.Printf("running GetCols internal func on r %v and cols %v\n", r, cols)
 		var line []string
 		var colvals []string
 		split := lscan.ByByte('\t')
 
 		s := bufio.NewScanner(r)
 		s.Buffer([]byte{}, 1e12)
+		i := 0
 		for s.Scan() {
 			// fmt.Printf("scanning line: %v\n", s.Text())
 			line = lscan.SplitByFunc(line, s.Text(), split)
@@ -137,6 +157,9 @@ func GetCols(r io.Reader, cols []int) io.Reader {
 				}
 			}
 			fmt.Fprintln(w, strings.Join(colvals, "\t"))
+			// fmt.Fprintf(os.Stderr, "GetCols output: %s\n", strings.Join(colvals, "\t"))
+			i++
 		}
+		fmt.Printf("GetCols lines: %v\n", i)
 	})
 }
