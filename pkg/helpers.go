@@ -339,7 +339,7 @@ func ReChrSingle(r io.Reader, biolines []string) (io.Reader) {
 		for s.Scan() {
 			out := s.Text()
 			for _, l := range biolines {
-				out = chrre.ReplaceAllString(out, `&` + "_" + l)
+				out = chrre.ReplaceAllString(out, `$0` + "_" + l)
 			}
 			fmt.Println(w, out)
 		}
