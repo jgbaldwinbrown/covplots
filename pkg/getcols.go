@@ -83,6 +83,28 @@ func HicPairColumnsSome(rs []io.Reader, args any) ([]io.Reader, error) {
 	return GetMultipleColsSome(rs, []int{0,1,2,5}, somereaders), nil
 }
 
+func HicPairFpkmColumns(rs []io.Reader, args any) ([]io.Reader, error) {
+	fmt.Printf("HicPairFpkmColumns: putting rs %v into GetMultiple Cols\n", rs)
+	return GetMultipleCols(rs, []int{0,1,2,14}), nil
+}
+
+func HicPairFpkmColumnsSome(rs []io.Reader, args any) ([]io.Reader, error) {
+	somereaders := ToIntSlice(args)
+	fmt.Printf("HicPairFpkmColumns: putting rs %v into GetMultiple Cols\n", rs)
+	return GetMultipleColsSome(rs, []int{0,1,2,14}, somereaders), nil
+}
+
+func HicSelfFpkmColumns(rs []io.Reader, args any) ([]io.Reader, error) {
+	fmt.Printf("HicSelfFpkmColumns: putting rs %v into GetMultiple Cols\n", rs)
+	return GetMultipleCols(rs, []int{0,1,2,15}), nil
+}
+
+func HicSelfFpkmColumnsSome(rs []io.Reader, args any) ([]io.Reader, error) {
+	somereaders := ToIntSlice(args)
+	fmt.Printf("HicSelfFpkmColumns: putting rs %v into GetMultiple Cols\n", rs)
+	return GetMultipleColsSome(rs, []int{0,1,2,15}, somereaders), nil
+}
+
 func HicPairPropFpkmColumns(rs []io.Reader, args any) ([]io.Reader, error) {
 	fmt.Printf("HicPairPropFpkmColumns: putting rs %v into GetMultiple Cols\n", rs)
 	return GetMultipleCols(rs, []int{0,1,2,16}), nil

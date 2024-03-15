@@ -236,8 +236,12 @@ func GetFunc(fstr string) func(rs []io.Reader, args any) ([]io.Reader, error) {
 	case "hic_pair_cols_some": return HicPairColumnsSome
 	case "hic_pair_prop_cols": return HicPairPropColumns
 	case "hic_pair_prop_cols_some": return HicPairPropColumnsSome
+	case "hic_pair_fpkm_cols": return HicPairFpkmColumns
+	case "hic_pair_fpkm_cols_some": return HicPairFpkmColumnsSome
 	case "hic_pair_prop_fpkm_cols": return HicPairPropFpkmColumns
 	case "hic_pair_prop_fpkm_cols_some": return HicPairPropFpkmColumnsSome
+	case "hic_self_fpkm_cols": return HicSelfFpkmColumns
+	case "hic_self_fpkm_cols_some": return HicSelfFpkmColumnsSome
 	case "rechr": return ReChr
 	case "cov_win_cols": return WindowCovColumns
 	case "cov_win_cols_some": return WindowCovColumnsSome
@@ -445,6 +449,10 @@ type MultiplotPlotFuncArgs struct {
 
 func Multiplot(cfg UltimateConfig, chr string, start, end int) error {
 	outpre := fmt.Sprintf("%s_%v_%v_%v", cfg.Outpre, chr, start, end)
+	if e := os.MkdirAll(outpre, 0776); e != nil {
+		return fmt.Errorf("Multiplot: %w", e)
+	}
+
 	var rs []io.Reader
 	fullchr := cfg.Fullchr || chr == "full_genome"
 	for _, set := range cfg.InputSets {
