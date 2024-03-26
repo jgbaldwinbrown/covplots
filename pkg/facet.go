@@ -182,3 +182,107 @@ func PlotMultiFacetScalesBoxedAny(outpre string, ylim []float64, args any, margs
 	return PlotMultiFacetScalesBoxed(outpre, args2, margs)
 }
 
+func PlotMultiTissue(outpre string, scalespath string) error {
+	fmt.Fprintf(os.Stderr, "running PlotMultiTissue\n")
+	fmt.Fprintf(os.Stderr, "PlotMultiTissue scalespath: %v\n", scalespath);
+	script := fmt.Sprintf(
+		`#!/bin/bash
+set -e
+
+plot_tissues %v %v %v
+`,
+		fmt.Sprintf("%v_plfmt.bed", outpre),
+		fmt.Sprintf("%v_plotted.png", outpre),
+		scalespath,
+	)
+
+	return shellout.ShellOutPiped(script, os.Stdin, os.Stdout, os.Stderr)
+}
+
+func PlotMultiTissueAny(outpre string, ylim []float64, args any, margs MultiplotPlotFuncArgs) error {
+	scalespath, ok := args.(string)
+	if !ok {
+		return fmt.Errorf("PlotMultiTissueAny: args %v not a string", args)
+	}
+	if scalespath == "" {
+		return fmt.Errorf("PlotMultiTissueAny: args %v == \"\"", args)
+	}
+	return PlotMultiTissue(outpre, scalespath)
+}
+
+func PlotMultiRescue(outpre string, scalespath string) error {
+	fmt.Fprintf(os.Stderr, "running PlotMultiRescue\n")
+	fmt.Fprintf(os.Stderr, "PlotMultiRescue scalespath: %v\n", scalespath);
+	script := fmt.Sprintf(
+		`#!/bin/bash
+set -e
+
+plot_rescue %v %v %v
+`,
+		fmt.Sprintf("%v_plfmt.bed", outpre),
+		fmt.Sprintf("%v_plotted.png", outpre),
+		scalespath,
+	)
+
+	return shellout.ShellOutPiped(script, os.Stdin, os.Stdout, os.Stderr)
+}
+
+func PlotMultiRescueAny(outpre string, ylim []float64, args any, margs MultiplotPlotFuncArgs) error {
+	scalespath, ok := args.(string)
+	if !ok {
+		return fmt.Errorf("PlotMultiRescueAny: args %v not a string", args)
+	}
+	if scalespath == "" {
+		return fmt.Errorf("PlotMultiRescueAny: args %v == \"\"", args)
+	}
+	return PlotMultiRescue(outpre, scalespath)
+}
+
+type PlotMultiSawamuraArgs struct {
+	Scales string
+	Boxes string
+}
+
+func PlotMultiSawamura(outpre string, args PlotMultiSawamuraArgs, margs MultiplotPlotFuncArgs) error {
+	h := func(e error) error {
+		return fmt.Errorf("PlotMultiSawamura: %w", e)
+	}
+
+	boxpre := fmt.Sprintf("%v_boxes", outpre)
+	boxpath := fmt.Sprintf("%v_boxes_plfmt.bed", outpre)
+	err := PlfmtPath(args.Boxes, boxpre, margs)
+	if err != nil {
+		return h(err)
+	}
+
+	fmt.Fprintf(os.Stderr, "running PlotMultiFacetScalesBoxed\n")
+	fmt.Fprintf(os.Stderr, "PlotMultiFacetScalesBoxed scalespath: %v\n", args.Scales);
+	fmt.Fprintf(os.Stderr, "PlotMultiFacetScalesBoxed boxes path: %v\n", boxpath);
+	script := fmt.Sprintf(
+		`#!/bin/bash
+set -e
+
+plot_sawamura %v %v %v %v
+`,
+		fmt.Sprintf("%v_plfmt.bed", outpre),
+		fmt.Sprintf("%v_plotted.png", outpre),
+		args.Scales,
+		boxpath,
+	)
+
+	err = shellout.ShellOutPiped(script, os.Stdin, os.Stdout, os.Stderr)
+	if err != nil {
+		return h(err)
+	}
+	return nil
+}
+
+func PlotSawamuraAny(outpre string, ylim []float64, args any, margs MultiplotPlotFuncArgs) error {
+	var args2 PlotMultiSawamuraArgs
+	err := UnmarshalJsonOut(args, &args2)
+	if err != nil {
+		return fmt.Errorf("PlotMultiSawamuraAny: %w", err)
+	}
+	return PlotMultiSawamura(outpre, args2, margs)
+}
+

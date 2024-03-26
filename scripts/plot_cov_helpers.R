@@ -146,6 +146,99 @@ read_bed_cov_named_facetted <- function(inpath, nlog) {
 	return(giant)
 }
 
+# FST win is in bed format with columns for TISSUE, GENO, and PLOIDY
+read_bed_cov_tissue_geno_ploidy <- function(inpath, nlog) {
+	giant = as.data.frame(fread(inpath), header=FALSE)
+	print(head(giant))
+	if (ncol(giant) == 0) {
+		giant = data.frame(
+			character(),
+			numeric(),
+			numeric(),
+			numeric(),
+			character(),
+			character(),
+			character(),
+			character(),
+			numeric(),
+			numeric(),
+			numeric(),
+			stringsAsFactors = FALSE
+		)
+	}
+	print("giant could be empty")
+	print(head(giant))
+	colnames(giant) = c("chrom", "BP1", "BP", "VAL", "TISSUE", "GENO", "PLOIDY", "NAME", "CHR", "cumsum.tmp", "cumsum.tmp2")
+	if (nlog) {
+		giant$VAL = -log10(giant$VAL)
+	}
+	print("final giant")
+	print(head(giant))
+	return(giant)
+}
+
+# FST win is in bed format with columns for TISSUE, GENO, and PLOIDY
+read_bed_cov_hybrid_rescue <- function(inpath, nlog) {
+	giant = as.data.frame(fread(inpath), header=FALSE)
+	print(head(giant))
+	if (ncol(giant) == 0) {
+		giant = data.frame(
+			character(),
+			numeric(),
+			numeric(),
+			numeric(),
+			character(),
+			character(),
+			character(),
+			character(),
+			numeric(),
+			numeric(),
+			numeric(),
+			stringsAsFactors = FALSE
+		)
+	}
+	print("giant could be empty")
+	print(head(giant))
+	colnames(giant) = c("chrom", "BP1", "BP", "VAL", "HYBRID", "RESCUE", "NAME", "CHR", "cumsum.tmp", "cumsum.tmp2")
+	if (nlog) {
+		giant$VAL = -log10(giant$VAL)
+	}
+	print("final giant")
+	print(head(giant))
+	return(giant)
+}
+
+# FST win is in bed format with columns for TISSUE, GENO, and PLOIDY
+read_bed_cov_hybrid_sawamura <- function(inpath, nlog) {
+	giant = as.data.frame(fread(inpath), header=FALSE)
+	print(head(giant))
+	if (ncol(giant) == 0) {
+		giant = data.frame(
+			character(),
+			numeric(),
+			numeric(),
+			numeric(),
+			character(),
+			character(),
+			character(),
+			character(),
+			numeric(),
+			numeric(),
+			numeric(),
+			stringsAsFactors = FALSE
+		)
+	}
+	print("giant could be empty")
+	print(head(giant))
+	colnames(giant) = c("chrom", "BP1", "BP", "VAL", "HYBRID", "SAWAMURA", "NAME", "CHR", "cumsum.tmp", "cumsum.tmp2")
+	if (nlog) {
+		giant$VAL = -log10(giant$VAL)
+	}
+	print("final giant")
+	print(head(giant))
+	return(giant)
+}
+
 # FST win is in bed format with extra FACET column after NAME
 read_bed_cov_named_labelled <- function(inpath, nlog) {
 	giant = as.data.frame(fread(inpath), header=FALSE)
@@ -821,3 +914,63 @@ plot_cov_multi_pretty_colorseries <- function(data, outpre, width, height, res_s
 		plot_cov_multi_pretty_colorseries_one(mdata, outpath, width, height, res_scale, medians, ylimmin, ylimmax, xlab, ylab, series_names)
 	}
 }
+
+plot_cov_multi_facetsc_tissue <- function(data, path, width, height, res_scale, medians, scales_y) {
+	print("data head:")
+	print(head(data))
+	png(path, width = width * res_scale, height = height * res_scale, res = res_scale)
+		a = ggplot(data = data) +
+		geom_line(aes(x = (cumsum.tmp + cumsum.tmp2) / 2, y = VAL, color = factor(PLOIDY), linetype = factor(TISSUE)), size = 1.5) +
+		scale_x_continuous(breaks = medians$median.x, labels = medians$chrom) +
+		xlab("Chromosome") +
+		ylab("Pairing proportion") +
+		scale_color_discrete(name = "Ploidy")+
+		scale_linetype_discrete(name = "Tissue")+
+		theme_bw() +
+		theme(text = element_text(size=24)) +
+		lims(y = c(0, 0.5)) +
+		facet_grid(factor(GENO, levels=names(scales_y))~.)
+		# facet_grid_sc(factor(GENO, levels=names(scales_y))~., scales=list(y=scales_y))
+
+		print(a)
+	dev.off()
+		#geom_point(aes(x = cumsum.tmp, y = VAL, color = factor(NAME))) +
+}
+
+plot_cov_multi_facetsc_rescue <- function(data, path, width, height, res_scale, medians, scales_y) {
+	print("data head:")
+	print(head(data))
+	png(path, width = width * res_scale, height = height * res_scale, res = res_scale)
+		a = ggplot(data = data) +
+		geom_line(aes(x = (cumsum.tmp + cumsum.tmp2) / 2, y = VAL, color = factor(RESCUE), linetype = factor(HYBRID), group = factor(NAME)), size = 1.5) +
+		scale_x_continuous(breaks = medians$median.x, labels = medians$chrom) +
+		xlab("Chromosome") +
+		ylab("Pairing proportion") +
+		scale_color_discrete(name = "Rescue phenotype")+
+		scale_linetype_discrete(name = "Hybridity")+
+		theme_bw() +
+		theme(text = element_text(size=24)) +
+		lims(y = c(0, 0.5))
+
+		print(a)
+	dev.off()
+}
+
+
+plot_cov_multi_facetsc_sawamura <- function(data, path, width, height, res_scale, medians, scales_y, rect) {
+	a = ggplot(data = data) +
+	geom_rect(data = rect, aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax), fill = "#5555DD", color = "#5555DD", alpha = 0.3) +
+	geom_line(aes(x = (cumsum.tmp + cumsum.tmp2) / 2, y = VAL, color = factor(SAWAMURA), group = factor(NAME)), size = 1.5) +
+	scale_x_continuous(breaks = medians$median.x, labels = medians$chrom) +
+	xlab("Chromosome") +
+	ylab("Pairing proportion") +
+	scale_color_discrete(name = "Sawamura genotype")+
+	theme_bw() +
+	theme(text = element_text(size=24)) +
+	lims(y = c(0, 0.5))
+
+	png(path, width = width * res_scale, height = height * res_scale, res = res_scale)
+	print(a)
+	dev.off()
+}
+

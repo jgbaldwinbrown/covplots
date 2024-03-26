@@ -96,6 +96,15 @@ chmod +x ~/mybin/plot_boxwhisker
 cp scripts/plot_singlebp_multiline_cov_facetname_scales.R ~/mybin/plot_singlebp_multiline_cov_facetname_scales
 chmod +x ~/mybin/plot_singlebp_multiline_cov_facetname_scales
 
+cp scripts/plot_tissues.R ~/mybin/plot_tissues
+chmod +x ~/mybin/plot_tissues
+
+cp scripts/plot_rescue.R ~/mybin/plot_rescue
+chmod +x ~/mybin/plot_rescue
+
+cp scripts/plot_sawamura.R ~/mybin/plot_sawamura
+chmod +x ~/mybin/plot_sawamura
+
 cp scripts/pve.R ~/mybin/pve
 chmod +x ~/mybin/pve
 

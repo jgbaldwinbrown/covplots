@@ -12,7 +12,12 @@ import (
 )
 
 func GetPlotFunc(fstr string) func(outpre string, ylim []float64, args any, margs MultiplotPlotFuncArgs) error {
+	fmt.Fprintf(os.Stderr, "plotting with fstr %v\n", fstr)
 	switch fstr {
+	case "plot_tissues": return PlotMultiTissueAny
+	case "plot_tissue": return PlotMultiTissueAny
+	case "plot_rescue": return PlotMultiRescueAny
+	case "plot_sawamura": return PlotMultiSawamuraAny
 	case "plot_multi": return PlotMultiAny
 	case "plot_multi_pretty": return PlotMultiPrettyAny
 	case "plot_multi_pretty_blue": return PlotMultiPrettyBlueAny
