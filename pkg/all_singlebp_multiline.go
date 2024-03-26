@@ -96,7 +96,7 @@ plot_singlebp_multiline_cov %v %v %v %v
 		ylim[1],
 	)
 
-	return shellout.ShellOutPiped(script, os.Stdin, os.Stdout, os.Stderr)
+	return shellout.ShellPiped(script, os.Stdin, os.Stdout, os.Stderr)
 }
 
 func PlotMultiFixedOrder(outpre string, ylim []float64) error {
@@ -112,7 +112,7 @@ plot_singlebp_multiline_cov_fixed_order %v %v %v %v
 		ylim[1],
 	)
 
-	return shellout.ShellOutPiped(script, os.Stdin, os.Stdout, os.Stderr)
+	return shellout.ShellPiped(script, os.Stdin, os.Stdout, os.Stderr)
 }
 
 	// xlab = args[5]
@@ -150,7 +150,7 @@ plot_singlebp_multiline_cov_pretty "%v" "%v" "%v" "%v" "%v" "%v" "%v" "%v" "%v" 
 		cfg.TextSize,
 	)
 
-	return shellout.ShellOutPiped(script, os.Stdin, os.Stdout, os.Stderr)
+	return shellout.ShellPiped(script, os.Stdin, os.Stdout, os.Stderr)
 }
 
 func PlotMultiPrettyBlue(outpre string, ylim []float64, cfg PrettyCfg) error {
@@ -171,7 +171,7 @@ plot_multi_pretty_blue "%v" "%v" "%v" "%v" "%v" "%v" "%v" "%v" "%v"
 		cfg.Res,
 	)
 
-	return shellout.ShellOutPiped(script, os.Stdin, os.Stdout, os.Stderr)
+	return shellout.ShellPiped(script, os.Stdin, os.Stdout, os.Stderr)
 }
 
 func PlotMultiPrettyColorseries(outpre string, ylim []float64, cfg PrettyCfg) error {
@@ -192,7 +192,7 @@ plot_multi_pretty_colorseries "%v" "%v" "%v" "%v" "%v" "%v" "%v" "%v" "%v"
 		cfg.Res,
 	)
 
-	return shellout.ShellOutPiped(script, os.Stdin, os.Stdout, os.Stderr)
+	return shellout.ShellPiped(script, os.Stdin, os.Stdout, os.Stderr)
 }
 
 func PlotMultiFacet(outpre string, ylim []float64) error {
@@ -209,7 +209,7 @@ plot_singlebp_multiline_cov_facet %v %v %v %v
 		ylim[1],
 	)
 
-	return shellout.ShellOutPiped(script, os.Stdin, os.Stdout, os.Stderr)
+	return shellout.ShellPiped(script, os.Stdin, os.Stdout, os.Stderr)
 }
 
 func Nop([]io.Reader, any) ([]io.Reader, error) {return nil, nil}

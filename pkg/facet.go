@@ -56,7 +56,7 @@ plot_singlebp_multiline_cov_facetscales %v %v %v
 		scalespath,
 	)
 
-	return shellout.ShellOutPiped(script, os.Stdin, os.Stdout, os.Stderr)
+	return shellout.ShellPiped(script, os.Stdin, os.Stdout, os.Stderr)
 }
 
 func PlotMultiFacetScalesAny(outpre string, ylim []float64, args any, margs MultiplotPlotFuncArgs) error {
@@ -84,7 +84,7 @@ plot_singlebp_multiline_cov_facetname_scales %v %v %v
 		scalespath,
 	)
 
-	return shellout.ShellOutPiped(script, os.Stdin, os.Stdout, os.Stderr)
+	return shellout.ShellPiped(script, os.Stdin, os.Stdout, os.Stderr)
 }
 
 func PlotMultiFacetnameScalesAny(outpre string, ylim []float64, args any, margs MultiplotPlotFuncArgs) error {
@@ -166,7 +166,7 @@ plot_singlebp_multiline_cov_facetscales_boxed %v %v %v %v
 		boxpath,
 	)
 
-	err = shellout.ShellOutPiped(script, os.Stdin, os.Stdout, os.Stderr)
+	err = shellout.ShellPiped(script, os.Stdin, os.Stdout, os.Stderr)
 	if err != nil {
 		return h(err)
 	}
@@ -196,7 +196,7 @@ plot_tissues %v %v %v
 		scalespath,
 	)
 
-	return shellout.ShellOutPiped(script, os.Stdin, os.Stdout, os.Stderr)
+	return shellout.ShellPiped(script, os.Stdin, os.Stdout, os.Stderr)
 }
 
 func PlotMultiTissueAny(outpre string, ylim []float64, args any, margs MultiplotPlotFuncArgs) error {
@@ -224,7 +224,7 @@ plot_rescue %v %v %v
 		scalespath,
 	)
 
-	return shellout.ShellOutPiped(script, os.Stdin, os.Stdout, os.Stderr)
+	return shellout.ShellPiped(script, os.Stdin, os.Stdout, os.Stderr)
 }
 
 func PlotMultiRescueAny(outpre string, ylim []float64, args any, margs MultiplotPlotFuncArgs) error {
@@ -270,14 +270,14 @@ plot_sawamura %v %v %v %v
 		boxpath,
 	)
 
-	err = shellout.ShellOutPiped(script, os.Stdin, os.Stdout, os.Stderr)
+	err = shellout.ShellPiped(script, os.Stdin, os.Stdout, os.Stderr)
 	if err != nil {
 		return h(err)
 	}
 	return nil
 }
 
-func PlotSawamuraAny(outpre string, ylim []float64, args any, margs MultiplotPlotFuncArgs) error {
+func PlotMultiSawamuraAny(outpre string, ylim []float64, args any, margs MultiplotPlotFuncArgs) error {
 	var args2 PlotMultiSawamuraArgs
 	err := UnmarshalJsonOut(args, &args2)
 	if err != nil {

@@ -119,7 +119,7 @@ plot_cov_vs_pair %v %v %v %v
 		ylim[1],
 	)
 
-	return shellout.ShellOutPiped(script, os.Stdin, os.Stdout, os.Stderr)
+	return shellout.ShellPiped(script, os.Stdin, os.Stdout, os.Stderr)
 }
 
 func PlotSelfVsPair(outpre string, ylim []float64, args any, margs MultiplotPlotFuncArgs) error {
@@ -135,7 +135,7 @@ plot_self_vs_pair %v %v %v %v
 		ylim[1],
 	)
 
-	return shellout.ShellOutPiped(script, os.Stdin, os.Stdout, os.Stderr)
+	return shellout.ShellPiped(script, os.Stdin, os.Stdout, os.Stderr)
 }
 
 func PlotSelfVsPairLim(outpre string, ylim []float64, args any, margs MultiplotPlotFuncArgs) error {
@@ -162,7 +162,7 @@ plot_self_vs_pair_lim %v %v %v %v %v %v
 		xlim[1],
 	)
 
-	return shellout.ShellOutPiped(script, os.Stdin, os.Stdout, os.Stderr)
+	return shellout.ShellPiped(script, os.Stdin, os.Stdout, os.Stderr)
 }
 
 type PlotSelfVsPairArgs struct {
@@ -201,7 +201,7 @@ plot_self_vs_pair_pretty "%v" "%v" "%v" "%v" "%v" "%v" "%v" "%v" "%v" "%v" "%v" 
 		a.TextSize,
 	)
 
-	return shellout.ShellOutPiped(script, os.Stdin, os.Stdout, os.Stderr)
+	return shellout.ShellPiped(script, os.Stdin, os.Stdout, os.Stderr)
 }
 
 func PlotSelfVsPairPrettyFixed(outpre string, ylim []float64, args any, margs MultiplotPlotFuncArgs) error {
@@ -229,7 +229,7 @@ plot_self_vs_pair_pretty_fixed "%v" "%v" "%v" "%v" "%v" "%v" "%v" "%v" "%v" "%v"
 		a.TextSize,
 	)
 
-	return shellout.ShellOutPiped(script, os.Stdin, os.Stdout, os.Stderr)
+	return shellout.ShellPiped(script, os.Stdin, os.Stdout, os.Stderr)
 }
 
 
@@ -483,7 +483,7 @@ plot_cov_hist "%v" "%v" "%v" "%v" "%v" "%v" "%v" "%v" "%v" "%v" "%v" "%v"
 	)
 	fmt.Println(script)
 
-	return shellout.ShellOutPiped(script, os.Stdin, os.Stdout, os.Stderr)
+	return shellout.ShellPiped(script, os.Stdin, os.Stdout, os.Stderr)
 }
 
 type PlotBoxwhiskerArgs struct {
@@ -526,6 +526,6 @@ plot_boxwhisker "%v" "%v" "%v" "%v" "%v" "%v" "%v" "%v" "%v" "%v" "%v" "%v" "%v"
 	)
 
 	fmt.Println(script)
-	return shellout.ShellOutPiped(script, os.Stdin, os.Stdout, os.Stderr)
+	return shellout.ShellPiped(script, os.Stdin, os.Stdout, os.Stderr)
 }
 
