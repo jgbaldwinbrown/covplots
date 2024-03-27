@@ -19,7 +19,7 @@ plfmt_flex -c 0 -b 1 -b2 2 -C %v -n > %v
 		fmt.Sprintf("%v_plfmt.bed", outpre),
 )
 
-	return shellout.ShellOutPiped(script, r, os.Stdout, os.Stderr)
+	return shellout.ShellPiped(script, r, os.Stdout, os.Stderr)
 }
 
 func Plot(outpre string) error {
@@ -33,7 +33,7 @@ plot_window_cov %v %v
 		fmt.Sprintf("%v_plotted.png", outpre),
 	)
 
-	return shellout.ShellOutPiped(script, os.Stdin, os.Stdout, os.Stderr)
+	return shellout.ShellPiped(script, os.Stdin, os.Stdout, os.Stderr)
 }
 
 func main() {
