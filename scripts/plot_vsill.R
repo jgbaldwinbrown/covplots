@@ -11,14 +11,12 @@ main <- function() {
 	cov_path = args[1]
 	out_path = args[2]
 	scalespath = args[3]
-	rectpath = args[4]
 
-	cov = read_bed_cov_hybrid_sawamura(cov_path, FALSE)
+	cov = read_bed_cov_named_facetted(cov_path, FALSE)
 
 	scales = read_scales(scalespath)
-	rect = bed2rect_small(rectpath)
 
-	plot_cov_multi_facetsc_sawamura(cov, out_path, 20, 8, 300, calc_chrom_labels_string(cov), scales, rect)
+	plot_cov_multi_facetsc_vsill(cov, out_path, 20, 8, 300, calc_chrom_labels_string(cov), scales)
 }
 
 main()

@@ -286,3 +286,73 @@ func PlotMultiSawamuraAny(outpre string, ylim []float64, args any, margs Multipl
 	return PlotMultiSawamura(outpre, args2, margs)
 }
 
+func PlotMultiSawamuraSdist(outpre string, args PlotMultiSawamuraArgs, margs MultiplotPlotFuncArgs) error {
+	h := func(e error) error {
+		return fmt.Errorf("PlotMultiSawamura: %w", e)
+	}
+
+	boxpre := fmt.Sprintf("%v_boxes", outpre)
+	boxpath := fmt.Sprintf("%v_boxes_plfmt.bed", outpre)
+	err := PlfmtPath(args.Boxes, boxpre, margs)
+	if err != nil {
+		return h(err)
+	}
+
+	fmt.Fprintf(os.Stderr, "running PlotMultiSawamuraSdist\n")
+	fmt.Fprintf(os.Stderr, "PlotMultiSawamuraSdist scalespath: %v\n", args.Scales);
+	fmt.Fprintf(os.Stderr, "PlotMultiSawamuraSdist boxes path: %v\n", boxpath);
+	script := fmt.Sprintf(
+		`#!/bin/bash
+set -e
+
+plot_sawamura_sdist %v %v %v %v
+`,
+		fmt.Sprintf("%v_plfmt.bed", outpre),
+		fmt.Sprintf("%v_plotted.png", outpre),
+		args.Scales,
+		boxpath,
+	)
+
+	err = shellout.ShellPiped(script, os.Stdin, os.Stdout, os.Stderr)
+	if err != nil {
+		return h(err)
+	}
+	return nil
+}
+
+func PlotMultiSawamuraSdistAny(outpre string, ylim []float64, args any, margs MultiplotPlotFuncArgs) error {
+	var args2 PlotMultiSawamuraArgs
+	err := UnmarshalJsonOut(args, &args2)
+	if err != nil {
+		return fmt.Errorf("PlotMultiSawamuraSdistAny: %w", err)
+	}
+	return PlotMultiSawamuraSdist(outpre, args2, margs)
+}
+
+func PlotMultiVsill(outpre string, scalespath string) error {
+	fmt.Fprintf(os.Stderr, "running PlotMultiVsill\n")
+	fmt.Fprintf(os.Stderr, "PlotMultiVsill scalespath: %v\n", scalespath);
+	script := fmt.Sprintf(
+		`#!/bin/bash
+set -e
+
+plot_vsill %v %v %v
+`,
+		fmt.Sprintf("%v_plfmt.bed", outpre),
+		fmt.Sprintf("%v_plotted.png", outpre),
+		scalespath,
+	)
+
+	return shellout.ShellPiped(script, os.Stdin, os.Stdout, os.Stderr)
+}
+
+func PlotMultiVsillAny(outpre string, ylim []float64, args any, margs MultiplotPlotFuncArgs) error {
+	scalespath, ok := args.(string)
+	if !ok {
+		return fmt.Errorf("PlotMultiVsillAny: args %v not a string", args)
+	}
+	if scalespath == "" {
+		return fmt.Errorf("PlotMultiVsillAny: args %v == \"\"", args)
+	}
+	return PlotMultiVsill(outpre, scalespath)
+}

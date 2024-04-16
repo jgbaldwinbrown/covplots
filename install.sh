@@ -105,6 +105,12 @@ chmod +x ~/mybin/plot_rescue
 cp scripts/plot_sawamura.R ~/mybin/plot_sawamura
 chmod +x ~/mybin/plot_sawamura
 
+cp scripts/plot_sawamura_sdist.R ~/mybin/plot_sawamura_sdist
+chmod +x ~/mybin/plot_sawamura_sdist
+
+cp scripts/plot_vsill.R ~/mybin/plot_vsill
+chmod +x ~/mybin/plot_vsill
+
 cp scripts/pve.R ~/mybin/pve
 chmod +x ~/mybin/pve
 

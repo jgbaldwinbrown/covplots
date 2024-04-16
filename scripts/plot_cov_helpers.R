@@ -310,6 +310,8 @@ read_2_col <- function(inpath, nlog) {
 
 # for reading bed format files with only the minimum columns
 read_bed_noval <- function(inpath) {
+	print("reading giant")
+	print("read giant")
 	giant = as.data.frame(fread(inpath), header=FALSE)
 	if (ncol(giant) == 0) {
 		giant = data.frame(
@@ -958,9 +960,11 @@ plot_cov_multi_facetsc_rescue <- function(data, path, width, height, res_scale, 
 
 
 plot_cov_multi_facetsc_sawamura <- function(data, path, width, height, res_scale, medians, scales_y, rect) {
-	a = ggplot(data = data) +
-	geom_rect(data = rect, aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax), fill = "#5555DD", color = "#5555DD", alpha = 0.3) +
-	geom_line(aes(x = (cumsum.tmp + cumsum.tmp2) / 2, y = VAL, color = factor(SAWAMURA), group = factor(NAME)), size = 1.5) +
+	a = ggplot(data = data)
+	if (nrow(rect) > 0) {
+		a = a + geom_rect(data = rect, aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax), fill = "#ddddff", color = "#ddddff", alpha = 0.5)
+	}
+	a = a + geom_line(aes(x = (cumsum.tmp + cumsum.tmp2) / 2, y = VAL, color = factor(SAWAMURA), group = factor(NAME)), size = 1.5) +
 	scale_x_continuous(breaks = medians$median.x, labels = medians$chrom) +
 	xlab("Chromosome") +
 	ylab("Pairing proportion") +
@@ -971,6 +975,43 @@ plot_cov_multi_facetsc_sawamura <- function(data, path, width, height, res_scale
 
 	png(path, width = width * res_scale, height = height * res_scale, res = res_scale)
 	print(a)
+	dev.off()
+}
+
+plot_cov_multi_facetsc_sawamura_sdist <- function(data, path, width, height, res_scale, medians, scales_y, rect) {
+	a = ggplot(data = data)
+	if (nrow(rect) > 0) {
+		a = a + geom_rect(data = rect, aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax), fill = "#ddddff", color = "#ddddff", alpha = 0.5)
+	}
+	a = a + geom_line(aes(x = (cumsum.tmp + cumsum.tmp2) / 2, y = VAL, color = factor(SAWAMURA), group = factor(NAME)), size = 1.5) +
+	scale_x_continuous(breaks = medians$median.x, labels = medians$chrom) +
+	xlab("Chromosome") +
+	ylab("Pairing proportion") +
+	scale_color_discrete(name = "Sawamura genotype")+
+	theme_bw() +
+	theme(text = element_text(size=24)) +
+	lims(y = c(-0.5, 1.5))
+
+	png(path, width = width * res_scale, height = height * res_scale, res = res_scale)
+	print(a)
+	dev.off()
+}
+
+plot_cov_multi_facetsc_vsill <- function(data, path, width, height, res_scale, medians, scales_y) {
+	print("data head:")
+	print(head(data))
+	png(path, width = width * res_scale, height = height * res_scale, res = res_scale)
+		a = ggplot(data = data) +
+		geom_line(aes(x = (cumsum.tmp + cumsum.tmp2) / 2, y = VAL), size = 1.5) +
+		scale_x_continuous(breaks = medians$median.x, labels = medians$chrom) +
+		xlab("Chromosome") +
+		ylab("Value in D. mel Iso1 X D. sim w501") +
+		theme_bw() +
+		theme(text = element_text(size=24)) +
+		lims(y = c(0, 0.5)) +
+		facet_grid_sc(factor(FACET, levels=names(scales_y))~., scales=list(y=scales_y))
+
+		print(a)
 	dev.off()
 }
 
