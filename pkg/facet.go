@@ -356,3 +356,75 @@ func PlotMultiVsillAny(outpre string, ylim []float64, args any, margs MultiplotP
 	}
 	return PlotMultiVsill(outpre, scalespath)
 }
+
+func PlotMultiHybrid(outpre string, scalespath string) error {
+	fmt.Fprintf(os.Stderr, "running PlotMultiHybrid\n")
+	fmt.Fprintf(os.Stderr, "PlotMultiHybrid scalespath: %v\n", scalespath);
+	script := fmt.Sprintf(
+		`#!/bin/bash
+set -e
+
+plot_hybrids %v %v %v
+`,
+		fmt.Sprintf("%v_plfmt.bed", outpre),
+		fmt.Sprintf("%v_plotted.png", outpre),
+		scalespath,
+	)
+
+	return shellout.ShellPiped(script, os.Stdin, os.Stdout, os.Stderr)
+}
+
+func PlotMultiHybridAny(outpre string, ylim []float64, args any, margs MultiplotPlotFuncArgs) error {
+	scalespath, ok := args.(string)
+	if !ok {
+		return fmt.Errorf("PlotMultiHybridAny: args %v not a string", args)
+	}
+	if scalespath == "" {
+		return fmt.Errorf("PlotMultiHybridAny: args %v == \"\"", args)
+	}
+	return PlotMultiHybrid(outpre, scalespath)
+}
+
+
+func PlotMultiSawamuraMelcolor(outpre string, args PlotMultiSawamuraArgs, margs MultiplotPlotFuncArgs) error {
+	h := func(e error) error {
+		return fmt.Errorf("PlotMultiSawamuraMelcolor: %w", e)
+	}
+
+	boxpre := fmt.Sprintf("%v_boxes", outpre)
+	boxpath := fmt.Sprintf("%v_boxes_plfmt.bed", outpre)
+	err := PlfmtPath(args.Boxes, boxpre, margs)
+	if err != nil {
+		return h(err)
+	}
+
+	fmt.Fprintf(os.Stderr, "running PlotMultiFacetScalesBoxed\n")
+	fmt.Fprintf(os.Stderr, "PlotMultiFacetScalesBoxed scalespath: %v\n", args.Scales);
+	fmt.Fprintf(os.Stderr, "PlotMultiFacetScalesBoxed boxes path: %v\n", boxpath);
+	script := fmt.Sprintf(
+		`#!/bin/bash
+set -e
+
+plot_sawamura_melcolor %v %v %v %v
+`,
+		fmt.Sprintf("%v_plfmt.bed", outpre),
+		fmt.Sprintf("%v_plotted.png", outpre),
+		args.Scales,
+		boxpath,
+	)
+
+	err = shellout.ShellPiped(script, os.Stdin, os.Stdout, os.Stderr)
+	if err != nil {
+		return h(err)
+	}
+	return nil
+}
+
+func PlotMultiSawamuraMelcolorAny(outpre string, ylim []float64, args any, margs MultiplotPlotFuncArgs) error {
+	var args2 PlotMultiSawamuraArgs
+	err := UnmarshalJsonOut(args, &args2)
+	if err != nil {
+		return fmt.Errorf("PlotMultiSawamuraMelcolorAny: %w", err)
+	}
+	return PlotMultiSawamuraMelcolor(outpre, args2, margs)
+}

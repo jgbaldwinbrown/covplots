@@ -16,9 +16,12 @@ func GetPlotFunc(fstr string) func(outpre string, ylim []float64, args any, marg
 	switch fstr {
 	case "plot_tissues": return PlotMultiTissueAny
 	case "plot_tissue": return PlotMultiTissueAny
+	case "plot_hybrids": return PlotMultiHybridAny
+	case "plot_hybrid": return PlotMultiHybridAny
 	case "plot_rescue": return PlotMultiRescueAny
 	case "plot_sawamura": return PlotMultiSawamuraAny
 	case "plot_sawamura_sdist": return PlotMultiSawamuraSdistAny
+	case "plot_sawamura_melcolor": return PlotMultiSawamuraMelcolorAny
 	case "plot_vsill": return PlotMultiVsillAny
 	case "plot_multi": return PlotMultiAny
 	case "plot_multi_pretty": return PlotMultiPrettyAny

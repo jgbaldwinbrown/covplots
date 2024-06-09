@@ -917,7 +917,7 @@ plot_cov_multi_pretty_colorseries <- function(data, outpre, width, height, res_s
 	}
 }
 
-plot_cov_multi_facetsc_tissue <- function(data, path, width, height, res_scale, medians, scales_y) {
+plot_cov_multi_facetsc_tissue_old1 <- function(data, path, width, height, res_scale, medians, scales_y) {
 	print("data head:")
 	print(head(data))
 	png(path, width = width * res_scale, height = height * res_scale, res = res_scale)
@@ -939,7 +939,26 @@ plot_cov_multi_facetsc_tissue <- function(data, path, width, height, res_scale, 
 		#geom_point(aes(x = cumsum.tmp, y = VAL, color = factor(NAME))) +
 }
 
-plot_cov_multi_facetsc_rescue <- function(data, path, width, height, res_scale, medians, scales_y) {
+plot_cov_multi_facetsc_tissue <- function(data, path, width, height, res_scale, medians, scales_y) {
+	a = ggplot(data = data) +
+		geom_line(aes(x = (cumsum.tmp + cumsum.tmp2) / 2, y = VAL, color = factor(TISSUE)), size = 1.5) +
+		scale_x_continuous(breaks = medians$median.x, labels = medians$chrom) +
+		xlab("Chromosome") +
+		ylab("Pairing proportion") +
+		scale_color_manual(name = "Tissue",
+			breaks = c("adult", "brain", "fat", "sal"),
+			values = c("#991111", "#dd4444", "#111199", "#4444dd")) +
+		theme_bw() +
+		theme(text = element_text(size=24)) +
+		lims(y = c(0, 0.5)) +
+		facet_grid(factor(GENO, levels=names(scales_y))~.)
+
+	png(path, width = width * res_scale, height = height * res_scale, res = res_scale)
+	print(a)
+	dev.off()
+}
+
+plot_cov_multi_facetsc_rescue_old1 <- function(data, path, width, height, res_scale, medians, scales_y) {
 	print("data head:")
 	print(head(data))
 	png(path, width = width * res_scale, height = height * res_scale, res = res_scale)
@@ -955,6 +974,31 @@ plot_cov_multi_facetsc_rescue <- function(data, path, width, height, res_scale, 
 		lims(y = c(0, 0.5))
 
 		print(a)
+	dev.off()
+}
+
+plot_cov_multi_facetsc_rescue <- function(data, path, width, height, res_scale, medians, scales_y) {
+	a = ggplot(data = data) +
+		geom_line(aes(x = (cumsum.tmp + cumsum.tmp2) / 2, y = VAL, color = factor(NAME)), size = 1.5) +
+		scale_x_continuous(breaks = medians$median.x, labels = medians$chrom) +
+		xlab("Chromosome") +
+		ylab("Pairing proportion") +
+		scale_color_manual(name = "Cross",
+			breaks = c(
+				# "a7xn sal to a7xn",
+				"hxw sal to ixw",
+				"ixa4 sal to ixa4",
+				"ixl sal to ixw",
+				"ixw sal to ixw"
+			),
+			labels = c("Hmr rescue", "D. melanogaster", "Lhr rescue", "Hybrid"),
+			values = c("#111199", "#991111", "#4444dd", "#dd4444"))+
+		theme_bw() +
+		theme(text = element_text(size=24)) +
+		lims(y = c(0, 0.5))
+
+	png(path, width = width * res_scale, height = height * res_scale, res = res_scale)
+	print(a)
 	dev.off()
 }
 
@@ -1012,6 +1056,45 @@ plot_cov_multi_facetsc_vsill <- function(data, path, width, height, res_scale, m
 		facet_grid_sc(factor(FACET, levels=names(scales_y))~., scales=list(y=scales_y))
 
 		print(a)
+	dev.off()
+}
+
+plot_cov_multi_facetsc_hybrid <- function(data, path, width, height, res_scale, medians, scales_y) {
+	a = ggplot(data = data) +
+		geom_line(aes(x = (cumsum.tmp + cumsum.tmp2) / 2, y = VAL, color = factor(GENO)), size = 1.5) +
+		scale_x_continuous(breaks = medians$median.x, labels = medians$chrom) +
+		xlab("Chromosome") +
+		ylab("Pairing proportion") +
+		scale_color_manual(name = "Tissue",
+			breaks = c("D. melanogaster", "D. simulans", "Hybrid"),
+			values = c("#991111", "#dd4444", "#111199")) +
+		theme_bw() +
+		theme(text = element_text(size=24)) +
+		lims(y = c(0, 0.5)) +
+		facet_grid(factor(TISSUE, levels=names(scales_y))~.)
+
+	png(path, width = width * res_scale, height = height * res_scale, res = res_scale)
+	print(a)
+	dev.off()
+}
+
+plot_cov_multi_facetsc_sawamura_melcolor <- function(data, path, width, height, res_scale, medians, scales_y, rect) {
+	data$SAWAMURA = factor(data$SAWAMURA, levels = c("D. melanogaster", "D. mel X Sawamura"))
+	a = ggplot(data = data)
+	if (nrow(rect) > 0) {
+		a = a + geom_rect(data = rect, aes(xmin = xmin, xmax = xmax, ymin = ymin, ymax = ymax), fill = "#ddddff", color = "#ddddff", alpha = 0.5)
+	}
+	a = a + geom_line(aes(x = (cumsum.tmp + cumsum.tmp2) / 2, y = VAL, color = factor(SAWAMURA), group = factor(NAME)), size = 1.5) +
+	scale_x_continuous(breaks = medians$median.x, labels = medians$chrom) +
+	xlab("Chromosome") +
+	ylab("Pairing proportion") +
+	scale_color_discrete(name = "Sawamura genotype")+
+	theme_bw() +
+	theme(text = element_text(size=24)) +
+	lims(y = c(0, 0.5))
+
+	png(path, width = width * res_scale, height = height * res_scale, res = res_scale)
+	print(a)
 	dev.off()
 }
 
