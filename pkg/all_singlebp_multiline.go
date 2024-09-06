@@ -55,6 +55,7 @@ func RunAllMultiplot() {
 	}
 }
 
+// Take a set of input readers and apply a chrom, start, end filter to each one
 func FilterMulti(chr string, start, end int, rs ...io.Reader) ([]io.Reader, error) {
 	var out []io.Reader
 	for _, r := range rs {
@@ -67,6 +68,8 @@ func FilterMulti(chr string, start, end int, rs ...io.Reader) ([]io.Reader, erro
 	return out, nil
 }
 
+// Take a set of plottable bed streams and a name for each one, and append the respective names to
+// the end of each line for each reader, then return a concatenated version of the streams
 func CombineSinglebpPlots(names []string, rs ...io.Reader) (*strings.Reader, error) {
 	fmt.Printf("len(rs): %v; names: %v\n", len(rs), names)
 	var out strings.Builder
@@ -83,6 +86,7 @@ func CombineSinglebpPlots(names []string, rs ...io.Reader) (*strings.Reader, err
 	return strings.NewReader(out.String()), nil
 }
 
+// Wrapper for plot_singlebp_multiline_cov
 func PlotMulti(outpre string, ylim []float64) error {
 	script := fmt.Sprintf(
 		`#!/bin/bash
@@ -99,6 +103,7 @@ plot_singlebp_multiline_cov %v %v %v %v
 	return shellout.ShellPiped(script, os.Stdin, os.Stdout, os.Stderr)
 }
 
+// Wrapper for plot_singlebp_multiline_cov_fixed_order
 func PlotMultiFixedOrder(outpre string, ylim []float64) error {
 	script := fmt.Sprintf(
 		`#!/bin/bash
@@ -122,6 +127,7 @@ plot_singlebp_multiline_cov_fixed_order %v %v %v %v
 	// height = as.numeric(args[8])
 	// res = as.numeric(args[9])
 
+// Config file type for PlotMultiPretty
 type PrettyCfg struct {
 	Xlab string
 	Ylab string
@@ -131,6 +137,7 @@ type PrettyCfg struct {
 	TextSize float64
 }
 
+// Wrapper for plot_singlebp_multiline_cov_pretty
 func PlotMultiPretty(outpre string, ylim []float64, cfg PrettyCfg) error {
 	script := fmt.Sprintf(
 		`#!/bin/bash
@@ -153,6 +160,7 @@ plot_singlebp_multiline_cov_pretty "%v" "%v" "%v" "%v" "%v" "%v" "%v" "%v" "%v" 
 	return shellout.ShellPiped(script, os.Stdin, os.Stdout, os.Stderr)
 }
 
+// Wrapper for plot_singlebp_multiline_cov_pretty_blue
 func PlotMultiPrettyBlue(outpre string, ylim []float64, cfg PrettyCfg) error {
 	script := fmt.Sprintf(
 		`#!/bin/bash
@@ -174,6 +182,7 @@ plot_multi_pretty_blue "%v" "%v" "%v" "%v" "%v" "%v" "%v" "%v" "%v"
 	return shellout.ShellPiped(script, os.Stdin, os.Stdout, os.Stderr)
 }
 
+// Wrapper for plot_singlebp_multiline_cov_pretty_colorseries
 func PlotMultiPrettyColorseries(outpre string, ylim []float64, cfg PrettyCfg) error {
 	script := fmt.Sprintf(
 		`#!/bin/bash
@@ -195,6 +204,7 @@ plot_multi_pretty_colorseries "%v" "%v" "%v" "%v" "%v" "%v" "%v" "%v" "%v"
 	return shellout.ShellPiped(script, os.Stdin, os.Stdout, os.Stderr)
 }
 
+// Wrapper for plot_singlebp_multiline_cov_facet
 func PlotMultiFacet(outpre string, ylim []float64) error {
 	fmt.Fprintf(os.Stderr, "running PlotMultiFacet\n")
 	script := fmt.Sprintf(
@@ -212,13 +222,16 @@ plot_singlebp_multiline_cov_facet %v %v %v %v
 	return shellout.ShellPiped(script, os.Stdin, os.Stdout, os.Stderr)
 }
 
+// A placeholder function that takes in a set of readers and returns nil
 func Nop([]io.Reader, any) ([]io.Reader, error) {return nil, nil}
 
+// A placeholder function that panics if you try to use a function that doesn't exist
 func Panic([]io.Reader, any) ([]io.Reader, error) {
 	panic(fmt.Errorf("trying to use an unimplemented function"))
 	return nil, nil
 }
 
+// The central switching function. This takes a function string and returns a function that can modify a set of input strings
 func GetFunc(fstr string) func(rs []io.Reader, args any) ([]io.Reader, error) {
 	switch fstr {
 	case "add_facet": return AddFacet
@@ -281,6 +294,7 @@ func GetFunc(fstr string) func(rs []io.Reader, args any) ([]io.Reader, error) {
 	return Panic
 }
 
+// A structure that can read and close gzipped files
 type GzReader struct {
 	f *os.File
 	*gzip.Reader
@@ -298,6 +312,7 @@ func (r *GzReader) Close() error {
 	return nil
 }
 
+// Open a file as gzipped if it ends in .gz, otherwise open normally
 func OpenMaybeGz(path string) (io.ReadCloser, error) {
 	re := regexp.MustCompile(`\.gz$`)
 
@@ -319,6 +334,7 @@ func OpenMaybeGz(path string) (io.ReadCloser, error) {
 	return &GzReader{f: r, Reader: gr}, nil
 }
 
+// Get a set of readers, one for each input path. These implement io.Closer and need to be closed eventually.
 func OpenPaths(paths ...string) ([]io.Reader, error) {
 	fmt.Printf("opening paths %v\n", paths)
 	var out []io.Reader
@@ -333,6 +349,7 @@ func OpenPaths(paths ...string) ([]io.Reader, error) {
 	return out, nil
 }
 
+// For all inputs, try to convert them to an io.Closer and run val.Close()
 func CloseAny[T any](ts ...T) {
 	for _, t := range ts {
 		a := any(t)
@@ -342,6 +359,9 @@ func CloseAny[T any](ts ...T) {
 	}
 }
 
+// The function that runs the main logic. It takes an input set and a range,
+// then opens a stream for every input element, applies all filters, combines
+// all streams to one stream, writes to a file, and closes all streams.
 func MultiplotInputSet(cfg InputSet, chr string, start, end int, fullchr bool) (io.Reader, []io.Closer, error) {
 	rs, err := OpenPaths(cfg.Paths...)
 	if err != nil {
@@ -405,6 +425,7 @@ func CheckPathExists(path string) bool {
 	return !errors.Is(err, os.ErrNotExist)
 }
 
+// Gzip a path in place
 func GzPath(path string, threads int) error {
 	cmd := exec.Command("pigz", "-f", "-p", fmt.Sprintf("%d", threads), path)
 	cmd.Stdout = os.Stdout
@@ -412,6 +433,7 @@ func GzPath(path string, threads int) error {
 	return cmd.Run()
 }
 
+// All input files are expected to have a chromosome name with the structure "chr_parent". This modifies the stream to just "chr".
 func StripParent(r io.Reader) (io.Reader, error) {
 	newr := PipeWrite(func(w io.Writer) {
 		s := bufio.NewScanner(r)
@@ -425,6 +447,7 @@ func StripParent(r io.Reader) (io.Reader, error) {
 	return newr, nil
 }
 
+// This reads in a bed file containing chromosome names and returns just the names.
 func GetManualChrs(path string) (chrs []string, err error) {
 	h := Handle("GetManualChrs: %w")
 
@@ -438,6 +461,7 @@ func GetManualChrs(path string) (chrs []string, err error) {
 	return chrs, nil
 }
 
+// Arguments for plotting multiple plots from one input dataset
 type MultiplotPlotFuncArgs struct {
 	Plformatter *Plformatter
 	Cfg UltimateConfig
@@ -447,6 +471,7 @@ type MultiplotPlotFuncArgs struct {
 	Fullchr bool
 }
 
+// Generate plottable files and run plot code for one UltimateConfig
 func Multiplot(cfg UltimateConfig, chr string, start, end int) error {
 	outpre := fmt.Sprintf("%s_%v_%v_%v", cfg.Outpre, chr, start, end)
 	if e := os.MkdirAll(outpre, 0776); e != nil {
@@ -528,6 +553,8 @@ func Multiplot(cfg UltimateConfig, chr string, start, end int) error {
 	return nil
 }
 
+// Get the function argument of type "any" from the json input and convet it to
+// [][]int, which is the format used for the subtraction operation
 func ParseSubArgs(args any) ([][]int, error) {
 	var out [][]int
 	anysl, ok := args.([]any)
@@ -555,6 +582,8 @@ func ParseSubArgs(args any) ([][]int, error) {
 	return out, nil
 }
 
+// Take exactly two input streams rs and subtract the values in rs[1] from the values in rs[0].
+// This version of subtract uses a lot of memory but will work on disjoint, unsorted inputs.
 func SubtractTwo(rs []io.Reader, args any) ([]io.Reader, error) {
 	newreader, err := Subtract(rs[0], rs[1])
 	if err != nil {
@@ -563,6 +592,7 @@ func SubtractTwo(rs []io.Reader, args any) ([]io.Reader, error) {
 	return []io.Reader{newreader}, nil
 }
 
+// Do not change anything, but make sure that rs is length 1.
 func Unchanged(rs []io.Reader, args any) ([]io.Reader, error) {
 	if len(rs) != 1 {
 		return nil, fmt.Errorf("Unchanged: wrong number of paths (%v)", len(rs))
@@ -570,6 +600,7 @@ func Unchanged(rs []io.Reader, args any) ([]io.Reader, error) {
 	return rs, nil
 }
 
+// Remove all nans from a set of floats, then subtract the mean and divide by the standard deviation
 func NormalizeFloats(in []float64) []float64 {
 	var nanfree []float64
 	for _, f := range in {
@@ -592,6 +623,7 @@ func NormalizeFloats(in []float64) []float64 {
 	return out
 }
 
+// Normalize all of the data in a set of inputs
 func Normalize(rs []io.Reader, args any) ([]io.Reader, error) {
 	fmt.Println("normalizing now")
 	if len(rs) != 1 {
@@ -626,6 +658,7 @@ func Normalize(rs []io.Reader, args any) ([]io.Reader, error) {
 	return []io.Reader{strings.NewReader(out.String())}, nil
 }
 
+// Plot the whole chromosome, not just a range.
 func MultiplotFullchr(cfg UltimateConfig) error {
 	err := Multiplot(cfg, "full_genome", 0, 0)
 	if err != nil {
@@ -635,6 +668,7 @@ func MultiplotFullchr(cfg UltimateConfig) error {
 	return nil
 }
 
+// Plot a specified set of windows within the genome
 func MultiplotSelectWins(cfg UltimateConfig, wins []BedEntry) error {
 	h := Handle("MultiplotSelectWins: %w")
 	fmt.Printf("MultiplotSelectWins: input: %v\n", wins)
@@ -647,6 +681,7 @@ func MultiplotSelectWins(cfg UltimateConfig, wins []BedEntry) error {
 	return nil
 }
 
+// Plot sliding windows along the whole genome
 func MultiplotSlide(cfg UltimateConfig, winsize, winstep int) error {
 	chrlens, err := GetChrLens(cfg.Chrlens)
 	if err != nil {
@@ -667,6 +702,7 @@ func MultiplotSlide(cfg UltimateConfig, winsize, winstep int) error {
 	return nil
 }
 
+// Take a set of UltimateConfigs and, for each one, do all necessary plotting (parallel).
 func AllMultiplotParallel(cfgs []UltimateConfig, winsize, winstep, threads int, fullgenome bool, selectWins []BedEntry) error {
 	jobs := make(chan UltimateConfig, len(cfgs))
 	for _, cfg := range cfgs {

@@ -21,6 +21,7 @@ type ColSedSomeArgs struct {
 	Replace string
 }
 
+// Modify a column in every reader using sed-style find and replace. Anyargs must be of type ColSedArgs.
 func ColSed(rs []io.Reader, anyargs any) ([]io.Reader, error) {
 	h := Handle("ColSed: %w")
 
@@ -48,6 +49,7 @@ func ColSed(rs []io.Reader, anyargs any) ([]io.Reader, error) {
 	return outs, nil
 }
 
+// Same as ColSed, but for just some readers. Anyargs must be of type ColSedSomeArgs.
 func ColSedSome(rs []io.Reader, anyargs any) ([]io.Reader, error) {
 	h := Handle("ColSedSome: %w")
 
@@ -73,6 +75,7 @@ func ColSedSome(rs []io.Reader, anyargs any) ([]io.Reader, error) {
 	return out, nil
 }
 
+// ColSed for just one reader. Used internally.
 func ColSedSingle(r io.Reader, col int, re *regexp.Regexp, replace string) (io.Reader) {
 	h := Handle("ColSedSingle: %w")
 

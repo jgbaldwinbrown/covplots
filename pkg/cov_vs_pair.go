@@ -11,6 +11,7 @@ import (
 	"fmt"
 )
 
+// The master switch for choosing a plot function.
 func GetPlotFunc(fstr string) func(outpre string, ylim []float64, args any, margs MultiplotPlotFuncArgs) error {
 	fmt.Fprintf(os.Stderr, "plotting with fstr %v\n", fstr)
 	switch fstr {
@@ -45,11 +46,14 @@ func GetPlotFunc(fstr string) func(outpre string, ylim []float64, args any, marg
 	}
 	return PlotPanic
 }
+
+// This only occurs if an unknown plot type is requested
 func PlotPanic(outpre string, ylim []float64, args any, margs MultiplotPlotFuncArgs) error {
 	panic(fmt.Errorf("trying to use an unimplemented plot function"))
 	return nil
 }
 
+// Basic plot function
 func PlotMultiAny(outpre string, ylim []float64, args any, margs MultiplotPlotFuncArgs) error {
 	return PlotMulti(outpre, ylim)
 }
@@ -58,6 +62,7 @@ func PlotMultiFixedOrderAny(outpre string, ylim []float64, args any, margs Multi
 	return PlotMultiFixedOrder(outpre, ylim)
 }
 
+// Take any object and attempt to convert it through json to the format of *dest
 func UnmarshalJsonOut(jsonOut any, dest any) error {
 	buf, err := json.Marshal(jsonOut)
 	if err != nil {
@@ -263,7 +268,7 @@ func SortAndUniqPoses[T any](maps ...map[Pos]T) []Pos {
 	return poses
 }
 
-func CombineToOneLineOld(rs []io.Reader, args any) ([]io.Reader, error) {
+func combineToOneLineOld(rs []io.Reader, args any) ([]io.Reader, error) {
 	maps := []map[Pos]float64{}
 	for _, r := range rs {
 		posmap, err := CollectVals(r)
@@ -299,27 +304,32 @@ func CombineToOneLineOld(rs []io.Reader, args any) ([]io.Reader, error) {
 	return []io.Reader{out}, nil
 }
 
+// Generic span used throughout package
 type Span struct {
 	Chr string
 	Start int
 	End int
 }
 
+// Generic span capable of holding .bedgraph entries
 type Entry struct {
 	Span
 	Val float64
 }
 
+// Span with a string value
 type Sentry struct {
 	Span
 	Val string
 }
 
+// Position plus value
 type PosEntry struct {
 	Pos
 	Val float64
 }
 
+// Parse a PosEntry from a valid bedgraph line and append it to *sl
 func CollectEntry(text string, sl *[]PosEntry) error {
 	*sl = (*sl)[:0]
 	var e Entry
@@ -333,6 +343,7 @@ func CollectEntry(text string, sl *[]PosEntry) error {
 	return nil
 }
 
+// Initialize a []float64 with all nan values
 func InitNaNSl(length int) []float64 {
 	out := make([]float64, length, length)
 	for i:=0; i<length; i++ {
@@ -341,6 +352,7 @@ func InitNaNSl(length int) []float64 {
 	return out
 }
 
+// Initialize a []string with all empty strings (unnecessary -- just use make([]string, length))
 func InitEmptyStringSl(length int) []string {
 	out := make([]string, length, length)
 	for i:=0; i<length; i++ {
@@ -349,6 +361,7 @@ func InitEmptyStringSl(length int) []string {
 	return out
 }
 
+// For every line in r, add that value to posmap and ebuffer; make nan-filled slices as needed.
 func CollectEntries(posmap map[Pos][]float64, idx, nidx int, ebuffer *[]PosEntry, r io.Reader) error {
 	s := bufio.NewScanner(r)
 	s.Buffer([]byte{}, 1e12)
@@ -369,6 +382,7 @@ func CollectEntries(posmap map[Pos][]float64, idx, nidx int, ebuffer *[]PosEntry
 	return nil
 }
 
+// Collect all of the single-basepir entries in a set of bedgraphs and write out one tab-separated table containing all values from all bedgraphs
 func CombineToOneLine(rs []io.Reader, args any) ([]io.Reader, error) {
 	posmap := map[Pos][]float64{}
 	var es []PosEntry
@@ -392,6 +406,7 @@ func CombineToOneLine(rs []io.Reader, args any) ([]io.Reader, error) {
 	return []io.Reader{out}, nil
 }
 
+// Like CollectEntries, but just collect entries from one reader. Much more efficient.
 func CollectEntriesDumb(posmap map[Span][]string, idx, nidx int, r io.Reader) error {
 	s := bufio.NewScanner(r)
 	s.Buffer([]byte{}, 1e12)
@@ -419,6 +434,7 @@ func CollectEntryDumb(text string) (Sentry, error) {
 	return e, nil
 }
 
+// CollectEntriesDumb for all readers, then combine them together as tab-separated values in a bed file
 func CombineToOneLineDumb(rs []io.Reader, args any) ([]io.Reader, error) {
 	if len(rs) < 1 {
 		return []io.Reader{}, nil
@@ -446,6 +462,7 @@ func CombineToOneLineDumb(rs []io.Reader, args any) ([]io.Reader, error) {
 	return []io.Reader{out}, nil
 }
 
+// Arguments for plotting coverage histograms
 type PlotCovHistArgs struct {
 	Xmin float64
 	Xmax float64

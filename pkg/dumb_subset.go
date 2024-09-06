@@ -8,6 +8,7 @@ import (
 	"fmt"
 )
 
+// Get span from bed line
 func GetSpan(text string) (Span, error) {
 	var s Span
 
@@ -17,6 +18,7 @@ func GetSpan(text string) (Span, error) {
 	return s, nil
 }
 
+// Subset the bed file in r to only contain exact matches for the spans in spanmap
 func SubsetDumbOne(r io.Reader, spanmap map[Span]struct{}) (io.Reader, error) {
 	s := bufio.NewScanner(r)
 	s.Buffer([]byte{}, 1e12)
@@ -34,6 +36,7 @@ func SubsetDumbOne(r io.Reader, spanmap map[Span]struct{}) (io.Reader, error) {
 	return out, nil
 }
 
+// Get all spans in the bedfile specified in path
 func GetPathSpanMap(path string) (map[Span]struct{}, error) {
 	h := Handle("GetPathSpanMap: %w")
 
@@ -54,6 +57,7 @@ func GetPathSpanMap(path string) (map[Span]struct{}, error) {
 	return m, nil
 }
 
+// Use GetSpanPathMap and SubsetDumbOne to make exact-span-match subsets
 func SubsetDumb(rs []io.Reader, args any) ([]io.Reader, error) {
 	if len(rs) < 1 {
 		return []io.Reader{}, nil
@@ -80,6 +84,7 @@ func SubsetDumb(rs []io.Reader, args any) ([]io.Reader, error) {
 	return out, nil
 }
 
+// Assuming a is of type []any, assume its contents are {string, []int} and extract those
 func ToPathAndInts(a any) (string, []int) {
 	as := a.([]any)
 	if len(as) != 2 {

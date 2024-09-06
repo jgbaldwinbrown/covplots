@@ -19,6 +19,7 @@ func GetAllSubtractSingleFlags() AllSingleFlags {
 	return f
 }
 
+// Do a set of subtraction jobs in parallel
 func SubtractSinglePlotWinsParallel(cfgs []Config, winsize, winstep, threads int) error {
 	jobs := make(chan Config, len(cfgs))
 	for _, cfg := range cfgs {
@@ -49,7 +50,6 @@ func SubtractSinglePlotWinsParallel(cfgs []Config, winsize, winstep, threads int
 	return nil
 }
 
-
 func RunAllSubtractSinglePlots() {
 	f := GetAllSubtractSingleFlags()
 	cfgs, err := GetConfig(f.Config, true)
@@ -63,6 +63,7 @@ func RunAllSubtractSinglePlots() {
 	}
 }
 
+// Do just one subtraction job in sliding windows across the whole genome
 func SubtractSinglePlotWins(inpath1, inpath2, chrlenpath, outpre string, winsize, winstep int) error {
 	chrlens, err := GetChrLens(chrlenpath)
 	if err != nil {
@@ -84,7 +85,7 @@ func SubtractSinglePlotWins(inpath1, inpath2, chrlenpath, outpre string, winsize
 	return nil
 }
 
-
+// Do just one subtraction job at one specified range
 func SubtractSinglePlotPath(path1, path2 string, outpre, chr string, start, end int) error {
 	r1, err := os.Open(path1)
 	if err != nil {
@@ -105,16 +106,19 @@ func SubtractSinglePlotPath(path1, path2 string, outpre, chr string, start, end 
 	return nil
 }
 
+// A position rather than a span to save some space
 type Pos struct {
 	Chr string
 	Bp int
 }
 
+// For internal use; a value and whether it's already been subtracted
 type SubVal struct {
 	Val float64
 	Subtracted bool
 }
 
+// Get a set of position and values from a bed file
 func ParsePosVal(line string, outbuf []PosEntry) ([]PosEntry, error) {
 	outbuf = outbuf[:0]
 	var chr string
@@ -131,6 +135,7 @@ func ParsePosVal(line string, outbuf []PosEntry) ([]PosEntry, error) {
 	return outbuf, nil
 }
 
+// Collect all positions and values from a bed file as a map
 func CollectVals(r io.Reader) (map[Pos]float64, error) {
 	out := make(map[Pos]float64)
 	s := bufio.NewScanner(r)
@@ -151,6 +156,7 @@ func CollectVals(r io.Reader) (map[Pos]float64, error) {
 	return out, nil
 }
 
+// Collect positions and values from two readers, then subtract any matching positions and report whether they've been subtracted
 func SubtractInternal(r1, r2 io.Reader) (map[Pos]SubVal, error) {
 	out := map[Pos]SubVal{}
 	s1 := bufio.NewScanner(r1)
@@ -182,6 +188,7 @@ func SubtractInternal(r1, r2 io.Reader) (map[Pos]SubVal, error) {
 	return out, nil
 }
 
+// Wrapper for SubtractInternal; use this
 func Subtract(r1, r2 io.Reader) (*strings.Reader, error) {
 	sub, err := SubtractInternal(r1, r2)
 	if err != nil {
@@ -197,7 +204,7 @@ func Subtract(r1, r2 io.Reader) (*strings.Reader, error) {
 	return strings.NewReader(out.String()), nil
 }
 
-func SubtractOld(r1, r2 io.Reader) (*strings.Reader, error) {
+func subtractOld(r1, r2 io.Reader) (*strings.Reader, error) {
 	vals1, err := CollectVals(r1)
 	if err != nil {
 		return nil, fmt.Errorf("Subtract: %w", err)
@@ -220,6 +227,7 @@ func SubtractOld(r1, r2 io.Reader) (*strings.Reader, error) {
 	return strings.NewReader(out.String()), nil
 }
 
+// Do a full subtraction and plot for exactly two datasets
 func SubtractSinglePlot(r1, r2 io.Reader, outpre, chr string, start, end int) error {
 	fr1, err := Filter(r1, chr, start, end)
 	if err != nil {
